@@ -1,0 +1,13 @@
+#IntelliJ IDEA
+.idea/
+.settings/
+
+#eclipse
+.project
+.WolframResources
+
+#disabled files
+*.disable
+
+#test files
+Tests/
