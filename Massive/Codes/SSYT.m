@@ -52,50 +52,23 @@ sb[i_, j_] :=
 sb[i_, j_] :=
     -sb[j, i] /; Signature[{i, j}] < 0;
 
-Options[YTtoAmp] = {fund -> "\[Lambda]t"};
-YTtoAmp[YT_, nt_, ParticleList_, OptionsPattern[]] :=
-    Module[ {amp = 1, headL, headR},
-      If[ OptionValue[fund] === "\[Lambda]t",
-        headL = ab;
-        headR = sb,
-        headL = sb;
-        headR = ab
-      ];
-      Do[amp *= headL @@ Complement[ParticleList, YT[[;;, ii]]], {ii, nt}];
-      Do[amp *= headR @@ YT[[;; 2, ii]], {ii, nt + 1, Length[YT[[1]]]}];
-      amp
-    ];
-
-Options[YTtoAmpmass] = {fund -> "\[Lambda]t", masslesslimit -> True};
+Options[YTtoAmpmass] = {fund -> "\[Lambda]t"};
 YTtoAmpmass[YT_, nt_, ParticleList_, OptionsPattern[]] :=
     Module[ {amp = 1, headL, headR,
       labelL = Table[1, Length[ParticleList]],
       labelR = Table[1, Length[ParticleList]]},
       If[ OptionValue[fund] === "\[Lambda]t",
         headL = ab;
-        headR = sb,
+        headR = sb; ,
         headL = sb;
-        headR = ab
+        headR = ab;
       ];
       Do[
-        amp *= (headL @@ Complement[ParticleList, YT[[;;, ii]]])
-            /. If[ !OptionValue@masslesslimit,
-          {i_Integer :> If[ i > Length[labelL],
-            i,
-            Subscript[i, ToString[i] <> "LG" <> ToString[labelL[[i]]++]]
-          ]},
-          {}
-        ],
+        amp *= headL @@ Complement[ParticleList, YT[[;;, ii]]];
+        ,
         {ii, nt}];
       Do[
-        amp *= (headR @@ YT[[;; 2, ii]])
-            /. If[ !OptionValue@masslesslimit,
-          {i_Integer :> If[ i > Length[labelR],
-            i,
-            Superscript[i, ToString[i] <> "LG" <> ToString[labelR[[i]]++]]
-          ]},
-          {}
-        ]
+        amp *= headR @@ YT[[;; 2, ii]];
         ,
         {ii, nt + 1, Length[YT[[1]]]}];
       Return[amp];
