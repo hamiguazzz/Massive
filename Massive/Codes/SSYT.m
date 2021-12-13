@@ -1,4 +1,4 @@
-Print["SSYT Loaded"];
+LogPri["SSYT Loaded"];
 
 (* ::Section::Closed:: *)
 (*SSYT*)

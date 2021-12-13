@@ -103,15 +103,23 @@ ruleSchSMLL = ruleSchAMLL /. ab -> sb;
 (*matching mass dimension*)
 (*TODO particle over 4*)
 
-Options[MatchtoDdim] = {fund -> "\[Lambda]t",
+Options[MatchtoDdim] = {
+  explicitmass -> False,
+  fund -> "\[Lambda]t",
   mass -> {"\!\(\*SubscriptBox[\(m\), \(1\)]\)",
     "\!\(\*SubscriptBox[\(m\), \(2\)]\)",
     "\!\(\*SubscriptBox[\(m\), \(3\)]\)",
     "\!\(\*SubscriptBox[\(m\), \(4\)]\)"}};
 MatchtoDdim[amp_, OptionsPattern[]] :=
-    Module[ {amplist1, amplist2,
+    Module[ {
+      massRev,
+      amplist1, amplist2,
       labelnum1 = <|1 -> {}, 2 -> {}, 3 -> {}, 4 -> {}|>,
-      labelnum2 = <|1 -> {}, 2 -> {}, 3 -> {}, 4 -> {}|>, mfactor = 1},
+      labelnum2 = <|1 -> {}, 2 -> {}, 3 -> {}, 4 -> {}|>, factor = 1},
+      massRev = If[OptionValue@explicitmass,
+        (If[# == 0, 0, 1 / #])& /@ (OptionValue@mass),
+        (If[# == 0, 0, 1])& /@ (OptionValue@mass)
+      ];
       amplist1 =
           amp //. {Times -> List, ab -> List, sb[i_, j_] -> {},
             Power[y_, z_] /; Element[z, PositiveIntegers] :>
@@ -120,14 +128,16 @@ MatchtoDdim[amp_, OptionsPattern[]] :=
           amp //. {Times -> List, ab[i_, j_] -> {}, sb -> List,
             Power[y_, z_] /; Element[z, PositiveIntegers] :>
                 ConstantArray[y, z]} // Flatten;
-      Do[If[ OptionValue[mass][[i]] === 0,
+      Do[If[ massRev[[i]] === 0,
         Continue[]
       ];
       labelnum1[i] = Count[amplist1, i];
       labelnum2[i] = Count[amplist2, i];
       If[ OptionValue[fund] === "\[Lambda]t",
-        Do[mfactor *= -sb[i, 9 - i] / OptionValue[mass][[i]], {j, labelnum1[i] - labelnum2[i]}],
-        Do[mfactor *= ab[i, 9 - i] / OptionValue[mass][[i]], {j, labelnum1[i] - labelnum2[i]}]
+        Do[factor *= -sb[i, 9 - i] * massRev[[i]],
+          {j, labelnum1[i] - labelnum2[i]}],
+        Do[factor *= ab[i, 9 - i] * massRev[[i]],
+          {j, labelnum1[i] - labelnum2[i]}]
       ], {i, 4}];
-      Return[amp * mfactor];
+      Return[amp * factor];
     ];
