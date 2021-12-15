@@ -1,4 +1,4 @@
-Print["Tools Loaded"];
+LogPri["Tools Loaded"];
 
 Sum2List[x_Plus] :=
     List @@ x;

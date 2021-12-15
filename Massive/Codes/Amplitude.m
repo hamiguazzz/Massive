@@ -1,5 +1,6 @@
 (*TODO construct amplitude for all amounts*)
 
+LogPri["Amplitude Loaded"];
 (*TODO better mass options fit for all massive particle amounts*)
 (* ::Subsection:: *)
 (*Reduce function*)
@@ -339,9 +340,10 @@ ConstructBasis[spins_, operDim_, OptionsPattern[]] :=
       permutationRules = Switch[
         OptionValue@permutation,
         None, {},
+        _List, OptionValue@permutation,
+        (*Only for test*)
         First, {1 -> 2, 2 -> 1, 2 * Np -> 2 * Np - 1, 2 * Np - 1 -> 2 * Np},
         All, Table[i -> Mod[i, Np] + 1, {i, Np}] ~ Join ~ Table[2 * Np + 1 - i -> 2 * Np - Mod[i, Np], {i, Np}],
-        (*Only for test*)
         23, {2 -> 3, 3 -> 2, 7 -> 6, 6 -> 7},
         _, Throw[{OptionValue@permutation, " not supported permutation"}];
       ];
