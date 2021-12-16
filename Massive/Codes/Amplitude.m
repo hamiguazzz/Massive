@@ -394,10 +394,21 @@ ConstructBasis[spins_, operDim_, OptionsPattern[]] :=
       (*      LogPri["Final basis amount is ", Length@permutedBasis];*)
       metaInfo = {"spins" -> spins, "operDim" -> operDim,
         "permutation" -> permutation,
-        "mass" -> OptionValue@mass, "explicitmass" -> OptionValue@explicitmass, "NeededCFBasisQ" -> NeededCFBasisQ};
+        "mass" -> OptionValue@mass, "explicitmass" -> OptionValue@explicitmass, "NeededCFBasisQ" -> NeededCFBasisQ} // Association;
       Return[{permutedBasisCoor,
         <|"basis" -> permutedBasis, "coordinate" -> coordinateDict,
           "cf" -> cfBasisDict, "bh" -> bhBasisDict, "reduceDict" -> reduceDict, "metaInfo" -> metaInfo,
           "permutationRules" -> permutationRules
         |>}];
     ];
+
+PositionOperatorPhysicalDim[ConstructBasisResult_] := Module[
+  {NeededCFBasisQ, cfBasisDict, permutationRules, reverseBasisDict, basis, index},
+  NeededCFBasisQ = ConstructBasisResult[[2]]["metaInfo"]["NeededCFBasisQ"];
+  cfBasisDict = ConstructBasisResult[[2]]["cf"];
+  permutationRules = ConstructBasisResult[[2]]["permutationRules"];
+  reverseBasisDict = KeyMap[# /. permutationRules&, ReverseDict[cfBasisDict]];
+  basis = ConstructBasisResult[[2]]["basis"];
+  index = (NeededCFBasisQ[#[[1]], #[[2]], False]&@reverseBasisDict[#]&@#)& /@ basis // PositionIndex;
+  Return[index[True]];
+];

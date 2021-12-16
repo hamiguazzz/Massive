@@ -101,7 +101,7 @@ SyncDataTask[syncedDict_, taskFun_, distributedData_, OptionsPattern[]] :=
       n = Floor[Length[distributedData] / kernels];
       data = Table[i -> distributedData[[1 + n * (i - 1) ;; n * i]], {i, kernels}] // Association;
       Do[data[i] ~ AppendTo ~ distributedData[[n * kernels + i]], {i, Length[distributedData] - n * kernels}];
-      If[ OptionValue@synctask == Infinity || OptionValue@synctime == Infinity,
+      If[ OptionValue@synctask == Infinity && OptionValue@synctime == Infinity,
         ParallelDo[
           Module[ {kernelOwnedData = data[k], kernelDict = syncedDict},
             Do[taskFun[kernelDict, kernelOwnedEle], {kernelOwnedEle, kernelOwnedData}];
