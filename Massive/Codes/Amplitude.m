@@ -82,6 +82,10 @@ Options[FMreduceWithDict] = {
     "\!\(\*SubscriptBox[\(m\), \(4\)]\)"
   }};
 SetAttributes[FMreduceWithDict, HoldFirst];
+If[!AssociationQ[globalReduceDict], globalReduceDict = <||>;];
+FMreduceWithDict[amp_, OptionsPattern[]] := FMreduceWithDict[globalReduceDict, amp];
+FMreduceWithDict[dict_?AssociationQ, OptionsPattern[]] := FMreduceWithDict[dict, #]&;
+FMreduceWithDict[dict_, amp_Integer, OptionsPattern[]] := amp;
 FMreduceWithDict[dict_, amp_, OptionsPattern[]] :=
     Module[ {F, dispRules, applyFun},
       dispRules = ReduceRules[fund -> OptionValue@fund, mass -> OptionValue@mass];
@@ -102,6 +106,7 @@ Options[FMreduce] = {
     "\!\(\*SubscriptBox[\(m\), \(4\)]\)"},
   parallelized -> False
 };
+FMreduce[amp_Integer, OptionsPattern[]] := amp;
 FMreduce[amp_, OptionsPattern[]] :=
     Module[ {F = amp, F1, iter = 1, dispRules, applyFun},
       dispRules = ReduceRules[fund -> OptionValue@fund, mass -> OptionValue@mass];
@@ -127,6 +132,7 @@ FMreduce[amp_, OptionsPattern[]] :=
 (*coefficient matrix*)
 
 FindCor[amp_, ampDbasis_] := FindCoordinate[amp, ampDbasis, !(MatchQ[#, _ab | _sb]) &];
+FindCor[ampDbasis_] := FindCoordinate[#, ampDbasis, !(MatchQ[#, _ab | _sb]) &]&;
 
 (* ::Section::Closed:: *)
 (*obtain d-dim basis*)
