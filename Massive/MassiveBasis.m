@@ -11,7 +11,7 @@ Print["Loading MassiveBasis..."];
 };
 {ConstructBasis};
 {ab, sb};
-{FptAmp , FindCor, MatchtoDdim, FMreduce, FMreduceWithDict};
+{MassOption, ConstructAmp , FindCor, MatchtoDdim, FMreduce, FMreduceWithDict};
 {Sum2List, Prod2List, CountHead, FindCoordinate};
 
 $MassiveVerbose = False;
@@ -22,6 +22,7 @@ Do[Get[file], {file, Global`$CodeFiles}];
 
 ConstructIndependentBasis[spins_, operDim_, identical_ : {}] :=
     Module[{
+      np = Length@spins,
       identicalList, physicalBasisIndex, externalDict = <||>,
       getCoordinateMatrix, rules, result, matrixDict, operatorDict, exprDict, totalOperator,
       cfBasisCoordinates, cfBasis, totalCoordinates, permutedBasis, independentPermutedBasis
@@ -37,13 +38,13 @@ ConstructIndependentBasis[spins_, operDim_, identical_ : {}] :=
       ];
       identicalList = (# ~ Append ~ If[OddQ[2 * spins[[#[[1]]]]], "A", "S"])& /@ identical;
 
-      rules = GetMassiveIdenticalRules[#, 4] & /@ identicalList //
+      rules = GetMassiveIdenticalRules[#, np] & /@ identicalList //
           Flatten[#, 1] & // DeleteDuplicates;
       result = Table[rule -> Sow[getCoordinateMatrix@rule][[1]], {rule, rules}] //
           Reap;
       matrixDict = result[[1]] // Association;
       operatorDict =
-          GetIndependentPermutedOperatorDict[identicalList, 4, matrixDict[#] &];
+          GetIndependentPermutedOperatorDict[identicalList, np, matrixDict[#] &];
       exprDict = GetTotalPermutedPolyDict[identicalList];
       totalOperator =
           Dot @@ Table[exprDict[id] /. operatorDict[id], {id, identicalList}];

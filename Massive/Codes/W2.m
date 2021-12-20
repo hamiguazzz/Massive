@@ -56,13 +56,13 @@ W2[Amp : Except[Plus], ind_List, np_Integer] :=
 
 (* Sometimes relation of W^2 Bi= Wij*s*Bj will be wrong*)
 W2Matrix[spins_, bhDim_, ind_] := Module[
-  {bhBasis, bhBasisHigher, mbhBasis, w2bhBasis, mbhBasisCoor, w2bhBasisCoor , rdict},
-  bhBasis = FptAmp @@ (spins ~ Append ~ bhDim);
-  bhBasisHigher = FptAmp @@ (spins ~ Append ~ (bhDim + 2));
+  {np = Length@spins, bhBasis, bhBasisHigher, mbhBasis, w2bhBasis, mbhBasisCoor, w2bhBasisCoor , rdict},
+  bhBasis = ConstructAmp[spins, bhDim];
+  bhBasisHigher = ConstructAmp[spins, bhDim + 2];
   rdict = <||>;
-  mbhBasis = FMreduceWithDict[rdict, Expand@#]& /@ (Mandelstam[ind] * bhBasis);
-  w2bhBasis = FMreduceWithDict[rdict, Expand@W2[#, ind, 4]]& /@ (bhBasis);
-  mbhBasisCoor = FindCor[#, bhBasisHigher]& /@ mbhBasis;
-  w2bhBasisCoor = FindCor[#, bhBasisHigher]& /@ w2bhBasis;
+  mbhBasis = FMreduceWithDict[rdict, Expand@#, np]& /@ (Mandelstam[ind] * bhBasis);
+  w2bhBasis = FMreduceWithDict[rdict, Expand@W2[#, ind, np], np]& /@ (bhBasis);
+  mbhBasisCoor = FindCor[bhBasisHigher] /@ mbhBasis;
+  w2bhBasisCoor = FindCor[bhBasisHigher] /@ w2bhBasis;
   Return[Transpose@LinearSolve[Transpose@mbhBasisCoor, Transpose@w2bhBasisCoor]];
 ];

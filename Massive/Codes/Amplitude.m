@@ -1,29 +1,123 @@
-(*TODO construct amplitude for all amounts*)
-
 LogPri["Amplitude Loaded"];
-(*TODO better mass options fit for all massive particle amounts*)
+
+(* ::Section:: *)
+(*Construct Amplitude*)
+MassOption[masses_List, np_] /; StringQ[masses[[1]]] := masses;
+MassOption[massesless_List, np_] /; IntegerQ[massesless[[1]]] := Table[
+  If[MemberQ[massesless, i], 0, "\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)"],
+  {i, np}];
+MassOption[All, np_] := Table["\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)", {i, np}];
+
+Options[ConstructAmp] = {
+  antispinor -> None,
+  fund -> "\[Lambda]t",
+  mass -> All};
+ConstructAmp[spins_, ampDim_, OptionsPattern[]] :=
+    Module[ {np = Length@spins, antispinors, para, yd, filling, amps, masses},
+      If[np < 4, Return[Null]];
+      masses = MassOption[OptionValue@mass, np];
+      antispinors = If[OptionValue@antispinor === None, ConstantArray[0, np], OptionValue@antispinor];
+      para = InnerConstructAmp[spins, antispinors, np, ampDim, masses];
+      If[ Length@Select[para, Negative[#]&] != 0,
+        Return[{}]
+      ];
+      yd = Table[0, 2, para[[1]] + para[[2]]] ~ Join ~ Table[0, np - 4, para[[1]]];
+      filling = Table[Table[i, para[[2 + i]]], {i, np}]
+          ~ Join ~ Table[Table[np * 2 + 1 - i, para[[-(np + 1 - i)]]], {i, np}] // Flatten // Sort;
+      amps = YTtoAmpmass[#, para[[1]], Range[np],
+        fund -> OptionValue[fund]]& /@
+          StrangeSSYT[yd, filling, para[[1]], Range[np + 1, 2 * np, 1]];
+      Return[amps];
+    ];
+
+InnerConstructAmp[spins_, antispinors_, np_, ampDim_, masses_] :=
+    Module[ {Left, Right},
+      Right = (ampDim - np + Total@spins - Total@antispinors) / 2;
+      Left = (ampDim - np - Total@spins + Total@antispinors) / 2;
+      {Left, Right} ~ Join ~
+          Table[
+            If[ masses[[i]] =!= 0,
+              Left - antispinors[[i]],
+              Left + 2 spins[[i]]],
+            {i, np}] ~ Join ~
+          Table[
+            If[  masses[[i]] =!= 0,
+              2 * spins[[i]] - antispinors[[i]],
+              0],
+            {i, np}] // Return;
+    ];
+
+(* ::Section:: *)
+(*Massless limit reduce rules*)
+(*In fact reduce faster by omitting these lower dimensions*)
+
+FruleP1MLL[np_] := {
+  sb[1, i_] * ab[1, j_] :> Sum[-sb[k, i] * ab[k, j], {k, 2, np}],
+  sb[1, i_]^m_ * ab[1, j_] :> Sum[-sb[1, i]^(m - 1) * sb[k, i] * ab[k, j], {k, 2, np}],
+  sb[1, i_] * ab[1, j_]^n_ :> Sum[-ab[1, j]^(n - 1) * sb[k, i] * ab[k, j], {k, 2, np}],
+  sb[1, i_]^m_ * ab[1, j_]^n_ :> Sum[-sb[1, i]^(m - 1) * ab[1, j]^(n - 1) * sb[k, i] * ab[k, j], {k, 2, np}]};
+FruleP3MLL[np_] := Join[{
+  sb[2, 3] * ab[2, 3] :> Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}],
+  sb[2, 3]^m_ * ab[2, 3] :> sb[2, 3]^(m - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}],
+  sb[2, 3] * ab[2, 3]^n_ :> ab[2, 3]^(n - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}],
+  sb[2, 3]^m_ * ab[2, 3]^n_ :> sb[2, 3]^(m - 1) ab[2, 3]^(n - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}]}];
+ruleSchAMLL = {
+  ab[i_, l_] * ab[j_, k_] /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0
+      :> -ab[i, j]ab[k, l] + ab[i, k]ab[j, l],
+  ab[i_, l_]^m_ * ab[j_, k_] /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0
+      :> ab[i, l]^(m - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l]),
+  ab[i_, l_] * ab[j_, k_]^n_ /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0
+      :> ab[j, k]^(n - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l]),
+  ab[i_, l_]^m_ * ab[j_, k_]^n_ /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0
+      :> ab[i, l]^(m - 1) ab[j, k]^(n - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l])};
+ruleSchSMLL = ruleSchAMLL /. ab -> sb;
+
+
+(* ::Section:: *)
+(*matching mass dimension*)
+
+Options[MatchtoDdim] = {
+  explicitmass -> False,
+  fund -> "\[Lambda]t",
+  mass -> All};
+MatchtoDdim[np_, OptionsPattern[]] := MatchtoDdim[#, np, Table[op -> OptionValue@op, {op, Keys@Options[MatchtoDdim]}]]&;
+MatchtoDdim[amp_, np_, OptionsPattern[]] :=
+    Module[ {
+      massRev, masses = MassOption[OptionValue@mass, np],
+      amplist1, amplist2,
+      labelnum1 = Table[i -> {}, {i, np}] // Association,
+      labelnum2 = Table[i -> {}, {i, np}] // Association, factor = 1},
+      massRev = If[OptionValue@explicitmass,
+        (If[# == 0, 0, 1 / #])& /@ masses,
+        (If[# == 0, 0, 1])& /@ masses
+      ];
+      amplist1 =
+          amp //. {Times -> List, ab -> List, sb[i_, j_] -> {},
+            Power[y_, z_] /; Element[z, PositiveIntegers] :>
+                ConstantArray[y, z]} // Flatten;
+      amplist2 =
+          amp //. {Times -> List, ab[i_, j_] -> {}, sb -> List,
+            Power[y_, z_] /; Element[z, PositiveIntegers] :>
+                ConstantArray[y, z]} // Flatten;
+      Do[If[ massRev[[i]] === 0,
+        Continue[]
+      ];
+      labelnum1[i] = Count[amplist1, i];
+      labelnum2[i] = Count[amplist2, i];
+      If[ OptionValue[fund] === "\[Lambda]t",
+        Do[factor *= -sb[i, 2 * np + 1 - i] * massRev[[i]],
+          {j, labelnum1[i] - labelnum2[i]}],
+        Do[factor *= ab[i, 2 * np + 1 - i] * massRev[[i]],
+          {j, labelnum1[i] - labelnum2[i]}]
+      ], {i, np}];
+      Return[amp * factor];
+    ];
+
 (* ::Subsection:: *)
 (*Reduce function*)
 
-Options[ReduceRules] = {
-  fund -> "\[Lambda]t",
-  mass -> {
-    "\!\(\*SubscriptBox[\(m\), \(1\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(2\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(3\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(4\)]\)"
-  }};
-ReduceRules[OptionsPattern[]] := Join[FruleP1MLL, FruleP3MLL, ruleSchSMLL, ruleSchAMLL];
+ReduceRules[np_] := Join[FruleP1MLL[np], FruleP3MLL[np], ruleSchSMLL, ruleSchAMLL];
 
-(*TODO better mass options fit for all massive particle amounts*)
-Options[FMreduceWithDict] = {
-  fund -> "\[Lambda]t",
-  mass -> {
-    "\!\(\*SubscriptBox[\(m\), \(1\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(2\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(3\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(4\)]\)"
-  }};
 SetAttributes[FMreducePart, HoldFirst];
 FMreducePart[dict_, amplst_, applyFun_] :=
     Module[ {i, factor, base, nextLevelAmpList, currentAmp, midResult, singleTermResult},
@@ -72,23 +166,21 @@ FMreducePart[dict_, amplst_, applyFun_] :=
       ]
     ];
 
-(*TODO better mass options fit for all massive particle amounts*)
-Options[FMreduceWithDict] = {
-  fund -> "\[Lambda]t",
-  mass -> {
-    "\!\(\*SubscriptBox[\(m\), \(1\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(2\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(3\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(4\)]\)"
-  }};
 SetAttributes[FMreduceWithDict, HoldFirst];
 If[!AssociationQ[globalReduceDict], globalReduceDict = <||>;];
-FMreduceWithDict[amp_, OptionsPattern[]] := FMreduceWithDict[globalReduceDict, amp];
-FMreduceWithDict[dict_?AssociationQ, OptionsPattern[]] := FMreduceWithDict[dict, #]&;
-FMreduceWithDict[dict_, amp_Integer, OptionsPattern[]] := amp;
-FMreduceWithDict[dict_, amp_, OptionsPattern[]] :=
+IniGlobalReduceDict[np_] := (
+  If[!AssociationQ[globalReduceDict], globalReduceDict = <||>;];
+  If[!KeyExistsQ[globalReduceDict, np], globalReduceDict[np] = <||>;]);
+FMreduceWithDict[dict_?AssociationQ, np_Integer] := FMreduceWithDict[dict, #, np]&;
+FMreduceWithDict[np_Integer] := (IniGlobalReduceDict[np];FMreduceWithDict[globalReduceDict[np],
+  #, np]&);
+FMreduceWithDict[amp_, np_Integer] := (IniGlobalReduceDict[np];FMreduceWithDict[globalReduceDict[np],
+  amp, np]);
+FMreduceWithDict[dict_, amp_Integer, np_Integer] := amp;
+FMreduceWithDict[dict_, amps_List, np_Integer] := FMreduceWithDict[dict, #, np]& /@ amps;
+FMreduceWithDict[dict_, amp_, np_Integer] :=
     Module[ {F, dispRules, applyFun},
-      dispRules = ReduceRules[fund -> OptionValue@fund, mass -> OptionValue@mass];
+      dispRules = ReduceRules[np];
       applyFun = (Map[(# /. dispRules) &, #]
           // Total // Expand // Sum2List) &;
       F = FMreducePart[dict, Sum2List[Expand[amp]], applyFun] // Flatten // Total // Expand;
@@ -99,17 +191,13 @@ FMreduceWithDict[dict_, amp_, OptionsPattern[]] :=
 Options[FMreduce] = {
   tryMax -> 30,
   fund -> "\[Lambda]t",
-  mass -> {
-    "\!\(\*SubscriptBox[\(m\), \(1\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(2\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(3\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(4\)]\)"},
+  mass -> All,
   parallelized -> False
 };
-FMreduce[amp_Integer, OptionsPattern[]] := amp;
-FMreduce[amp_, OptionsPattern[]] :=
+FMreduce[amp_Integer, np_Integer, OptionsPattern[]] := amp;
+FMreduce[amp_, np_Integer, OptionsPattern[]] :=
     Module[ {F = amp, F1, iter = 1, dispRules, applyFun},
-      dispRules = ReduceRules[fund -> OptionValue@fund, mass -> OptionValue@mass];
+      dispRules = ReduceRules[np];
       applyFun = ((If[! OptionValue[parallelized], Map, ParallelMap])
       [(# /. dispRules) &, Sum2List[Expand[#]]] // Total // Expand) &;
       While[True,
@@ -134,7 +222,7 @@ FMreduce[amp_, OptionsPattern[]] :=
 FindCor[amp_, ampDbasis_] := FindCoordinate[amp, ampDbasis, !(MatchQ[#, _ab | _sb]) &];
 FindCor[ampDbasis_] := FindCoordinate[#, ampDbasis, !(MatchQ[#, _ab | _sb]) &]&;
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*obtain d-dim basis*)
 
 Options[ReduceParallelized] = {
@@ -144,7 +232,7 @@ Options[ReduceParallelized] = {
   kernelAmount -> "Auto", synctask -> Infinity, synctime -> Infinity,
   externalReduceDict -> <||>, log -> True};
 SetAttributes[ReduceParallelized, HoldFirst];
-ReduceParallelized[ampcoorDict_, ampDict_, ampDbasis_, OptionsPattern[]] :=
+ReduceParallelized[ampcoorDict_, ampDict_, ampDbasis_, np_, OptionsPattern[]] :=
     Module[ {reduceFun, ampDict2 = ampDict // ReverseDict, keys, key,
       separateList = {}, kernels = Length[Kernels[]], dictSync},
       keys = ampDict2 // Keys;
@@ -159,11 +247,10 @@ ReduceParallelized[ampcoorDict_, ampDict_, ampDbasis_, OptionsPattern[]] :=
       If[ OptionValue@withDict === False,
         LogPri["Direct decomposition..."];
         reduceFun =
-            (FindCor[#, ampDbasis] &)@
+            FindCor[ampDbasis]@
                 FMreduce[
-                  MatchtoDdim[#, explicitmass -> OptionValue@explicitmass , mass -> OptionValue@mass],
-                  mass -> OptionValue@mass,
-                  fund -> OptionValue@fund,
+                  MatchtoDdim[#, np, explicitmass -> OptionValue@explicitmass , fund -> OptionValue@fund, mass -> OptionValue@mass],
+                  np,
                   parallelized -> False,
                   tryMax -> OptionValue@tryMax
                 ] &;
@@ -187,11 +274,10 @@ ReduceParallelized[ampcoorDict_, ampDict_, ampDbasis_, OptionsPattern[]] :=
             // LogPri["part1 N=", Length[keys] - Length[separateList],
           " costs:", #] &;
         reduceFun =
-            (FindCor[#, ampDbasis] &)@
+            FindCor[ampDbasis]@
                 FMreduce[
-                  MatchtoDdim[#],
-                  mass -> OptionValue@mass,
-                  fund -> OptionValue@fund,
+                  MatchtoDdim[#, np, explicitmass -> OptionValue@explicitmass , fund -> OptionValue@fund, mass -> OptionValue@mass],
+                  np,
                   parallelized -> True,
                   tryMax -> OptionValue@tryMax
                 ] &;
@@ -208,13 +294,13 @@ ReduceParallelized[ampcoorDict_, ampDict_, ampDbasis_, OptionsPattern[]] :=
         reduceFun[dict_, amp_] :=
             ampcoorDict ~ AssociateTo ~ ((amp -> FindCor[#, ampDbasis]) &@
                 FMreduceWithDict[dict,
-                  MatchtoDdim[amp],
-                  mass -> OptionValue@mass,
-                  fund -> OptionValue@fund])
+                  MatchtoDdim[amp, np, explicitmass -> OptionValue@explicitmass , fund -> OptionValue@fund, mass -> OptionValue@mass],
+                  np])
                 // AbsoluteTiming
                 // If[OptionValue@log, LogPri[ampDict2[amp], " cost ", #[[1]]]&, Identity];
         SetAttributes[reduceFun, HoldFirst];
         Options[reduceFun] = {
+          explicitmass -> OptionValue@explicitmass,
           mass -> OptionValue@mass,
           fund -> OptionValue@fund,
           log -> OptionValue@log
@@ -228,24 +314,19 @@ ReduceParallelized[ampcoorDict_, ampDict_, ampDbasis_, OptionsPattern[]] :=
       ];
     ];
 
-(*TODO better mass options fit for all massive particle amounts*)
 Options[ConstructBasis] = {
   (*only None, First, All are allowed*)
   permutation -> None,
   explicitmass -> False,
   fund -> "\[Lambda]t",
-  mass -> {
-    "\!\(\*SubscriptBox[\(m\), \(1\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(2\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(3\)]\)",
-    "\!\(\*SubscriptBox[\(m\), \(4\)]\)"},
+  mass -> All,
   singleCoreMaxHead -> "Auto", tryMax -> Infinity,
   withDict -> True, maxcount -> Infinity, tryMax -> Infinity,
   kernelAmount -> "Auto", log -> False,
   synctask -> Infinity, synctime -> Infinity, externalReduceDict -> <||>};
 ConstructBasis[spins_, operDim_, OptionsPattern[]] :=
     Module[{
-      metaInfo,
+      metaInfo, masses = MassOption[OptionValue@mass, Length@spins],
       antiList, dimCodeMinimal, Np, permutationRules,
       CalcOperatorDimContribute, nAMax, dimCFFrom, dimCFTo,
       GetNeededBHBasisDimList,
@@ -310,7 +391,7 @@ ConstructBasis[spins_, operDim_, OptionsPattern[]] :=
       bhDimList = GetNeededBHBasisDimList[cfIndexList];
       ZRank[matrix_] := If[matrix === {}, 0, MatrixRank@matrix];
       opts = {
-        mass -> OptionValue@mass,
+        mass -> masses,
         fund -> OptionValue@fund
       };
       extOpts = ((# -> OptionValue@#)& /@
@@ -323,9 +404,9 @@ ConstructBasis[spins_, operDim_, OptionsPattern[]] :=
       ];
       LogPri["Involved BH basis : ", bhDimList];
       LogPri["Involved CF basis : ", cfIndexList];
-      GenBHBasis[dim_] := FptAmp @@ (spins ~ Join ~ {dim} ~ Join ~ opts);
-      GenCFBasis[dim_, antispinorList_] := (FptAmp @@
-          (spins ~ Join ~ {dim} ~ Join ~ {antispinor -> antispinorList} ~ Join ~ opts));
+      GenBHBasis[dim_] := ConstructAmp @@ ({spins} ~ Join ~ {dim} ~ Join ~ opts);
+      GenCFBasis[dim_, antispinorList_] := (ConstructAmp @@
+          ({spins} ~ Join ~ {dim} ~ Join ~ {antispinor -> antispinorList} ~ Join ~ opts));
       (
         bhBasisDict = ParallelMap[(# -> GenBHBasis@#)& , bhDimList ] // Association // KeySort;
         bhBasis = bhBasisDict // Values // Flatten;
@@ -350,7 +431,7 @@ ConstructBasis[spins_, operDim_, OptionsPattern[]] :=
         (*Only for test*)
         First, {1 -> 2, 2 -> 1, 2 * Np -> 2 * Np - 1, 2 * Np - 1 -> 2 * Np},
         All, Table[i -> Mod[i, Np] + 1, {i, Np}] ~ Join ~ Table[2 * Np + 1 - i -> 2 * Np - Mod[i, Np], {i, Np}],
-        23, {2 -> 3, 3 -> 2, 7 -> 6, 6 -> 7},
+        23, {2 -> 3, 3 -> 2, Np * 2 - 1 -> Np * 2 - 2, Np * 2 - 2 -> Np * 2 - 1},
         _, Throw[{OptionValue@permutation, " not supported permutation"}];
       ];
       PermuteAmp[amp_] := Times @@ (Prod2List[amp] /. permutationRules);
@@ -359,12 +440,12 @@ ConstructBasis[spins_, operDim_, OptionsPattern[]] :=
       (*Print[cfPermutedDict]*);
       (*Return[{cfPermutedBasisDict, bhBasis}]*);
       reduceDict = Reap[ ReduceParallelized[
-        coordinateDict, cfPermutedBasisDict, bhBasis, opts ~ Join ~ extOpts]
+        coordinateDict, cfPermutedBasisDict, bhBasis, Np, opts ~ Join ~ extOpts]
           // AbsoluteTiming
           // (Sow[# // Last];LogPri["Coefficients totally costs:", # // First]) &][[2]][[1]][[1]];
 
       LogPri["Involved CF amplitude amount is ", cfBasisDict // Values // Flatten // Length];
-      LogPri["Involved CF amplitude amount is ", bhBasisDict // Values // Flatten // Length];
+      LogPri["Involved BH amplitude amount is ", bhBasisDict // Values // Flatten // Length];
       (*      LogPri["Involved BH amplitude amount is ",*)
       (*        Fold[Plus, ConstantArray[0, Length@bhBasis],*)
       (*          Map[((# == 0) /. {True -> 0, False -> 1}) &,*)
@@ -385,7 +466,7 @@ ConstructBasis[spins_, operDim_, OptionsPattern[]] :=
       ((permutedBasis = permutedBasis[[#]];permutedBasisCoor = permutedBasisCoor[[#]])&@
           Flatten[Position[#, Except[0, _?NumericQ], 1, 1] & /@
               RowReduce@Transpose@
-                  ReplaceAll[permutedBasisCoor, Table[If[e =!= 0, e -> 1], {e, OptionValue@mass}]]
+                  ReplaceAll[permutedBasisCoor, Table[If[e =!= 0, e -> 1], {e, masses}]]
           ]) // AbsoluteTiming //
           LogPri["Ranking costs ", #[[1]]]&;
       (*TODO reduce identical particles*)
@@ -400,7 +481,7 @@ ConstructBasis[spins_, operDim_, OptionsPattern[]] :=
       (*      LogPri["Final basis amount is ", Length@permutedBasis];*)
       metaInfo = {"spins" -> spins, "operDim" -> operDim,
         "permutation" -> permutation,
-        "mass" -> OptionValue@mass, "explicitmass" -> OptionValue@explicitmass, "NeededCFBasisQ" -> NeededCFBasisQ} // Association;
+        "mass" -> masses, "explicitmass" -> OptionValue@explicitmass, "NeededCFBasisQ" -> NeededCFBasisQ} // Association;
       Return[{permutedBasisCoor,
         <|"basis" -> permutedBasis, "coordinate" -> coordinateDict,
           "cf" -> cfBasisDict, "bh" -> bhBasisDict, "reduceDict" -> reduceDict, "metaInfo" -> metaInfo,
