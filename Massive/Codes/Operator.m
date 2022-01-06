@@ -148,12 +148,13 @@ FindPsiChain[amp_, np_Integer] := Module[
 FindPsiChain[np_Integer] := FindPsiChain[#, np]&;
 
 
+ClearAll[ConstructOpInSpinIndex];
 (*For antispinor 1 (A case), use spin = -/+ 1 is fine in spins_List, as A is not determined from antispinor but from psiChain{ab,1,xx,8,sb} structure*)
 ConstructOpInSpinIndex[amp_,np_Integer,spins_List]:=
 Module[{psiChain,chains,spInN,spinorIndex,SpinorObj,obj,index,findPtclSpin,opList,chain,curSign,DerPObj,DerMObj,FPObj,FMObj,APObj,AMObj,LI,RI,fPos,lorInN,lorIndex,lorIndexP,loopi,firstSpinorIndexN,firstSpinorObj,signFlipflop,testA,testAbSb},
 (*Make Psi chain*)
 psiChain=FindPsiChain[amp,np];
-Print["psiChian Found: ",psiChain];
+(*Print["psiChian Found: ",psiChain];*)
 chains=psiChain[[2]];
 findPtclSpin[ptcl_]:=If[MemberQ[Range[np+1,2np],ptcl],spins[[-ptcl+2np+1]],spins[[ptcl]]];(*4pt*)
 (*Make spinor index*)
@@ -182,7 +183,7 @@ If[ToString[chain[[1]]]=="circle",(*circle case*)
 chain=Drop[chain,1];
 firstSpinorIndexN=spInN;
 firstSpinorObj=chain[[1]];
-spInN++;
+(*spInN++;*)
 chain=Drop[chain,1];
 While[Length[chain]!=0,
 If[signFlipflop==1,
@@ -272,6 +273,7 @@ AppendTo[opList,{"\[Phi]",i}]
 Append[opList,psiChain[[1]]]
 ];
 ConstructOpInSpinIndex[amp_,np_Integer]:=ConstructOpInSpinIndex[amp,np,#[[1]]*(#[[2]]/.{1->-1,2->-1,0->1})&[Amp2MetaInfo[amp,np]]];
+
 spinorObj2Op={
 {n_Integer,1/2,i_}:>\!\(\*
 TagBox[
@@ -415,3 +417,103 @@ ShowStringCharacters->True,
 NumberMarks->True],
 FullForm]\)};
 (*Example: Dot@@(ConstructOpInSpinIndex[#,5]/.spinorObj2Op)&/@ConstructAmp[{1,1,1/2,1/2,0},10,antispinor->{0,1,0,1,0}]*)
+ClearAll[sortSpinorIndex];
+sortSpinorIndex[opListIn_,np_Integer]:=Module[{opList,outList,DList,sigmaSwitch,fac,loopi,loopj,spinorIndex,spinorIndexN,SIList,curObj,fermionCainEnd,circleEnd},
+sigmaSwitch[sigmaObj_]:=If[Length[sigmaObj]==4,
+If[First[sigmaObj]=="\[Sigma]",{"\[Sigma]Bar",sigmaObj[[2]],sigmaObj[[4]],sigmaObj[[3]]},{"\[Sigma]",sigmaObj[[2]],sigmaObj[[4]],sigmaObj[[3]]}],If[First[sigmaObj]=="\[Sigma]",{"\[Sigma]Bar",sigmaObj[[2]],sigmaObj[[3]],sigmaObj[[5]],sigmaObj[[4]]},{"\[Sigma]",sigmaObj[[2]],sigmaObj[[3]],sigmaObj[[5]],sigmaObj[[4]]}]];(*flip sigma_ab to sigma bar_ba*)
+fac=opListIn[[-1]];
+opList=Drop[opListIn,-1];
+outList={};
+DList={};
+loopi=1;
+spinorIndexN[n_]:=Module[{},Delete[SIList,Position[n]];Symbol["SI"<>ToString[n]]];
+spinorIndex[n_]:=Symbol["SI"<>ToString[n]];
+While[loopi<Length[opList]+1,(*add all object without Spinor Index except D*)
+If[opList[[loopi]][[1]]=="\[Phi]"\[Or]opList[[loopi]][[1]]=="A"\[Or]StringMatchQ[ToString[opList[[loopi]][[1]]],"F*"],
+AppendTo[outList,opList[[loopi]]];
+opList=Delete[opList,loopi];
+loopi--
+];
+loopi++
+];
+loopi=1;
+While[loopi<Length[opList]+1,(*add D to DList*)
+If[opList[[loopi]][[1]]=="D",
+AppendTo[DList,opList[[loopi]]];
+opList=Delete[opList,loopi];
+loopi--
+];
+loopi++
+];
+loopi=1;
+(*Now add object with spinor index, there are two case: (fermion sigmas fermion) and circle (all two index)*)
+While[loopi<Length[opList]+1,
+curObj=opList[[loopi]];
+If[Length[curObj]==3,(*femrion end case*)
+AppendTo[outList,curObj];
+opList=Delete[opList,loopi];
+loopj=1;
+While[loopj<Length[opList]+1,
+If[
+opList[[loopj]][[-2]]==outList[[-1]][[-1]],
+AppendTo[outList,opList[[loopj]]];
+opList=Delete[opList,loopj];
+loopj=1;
+Goto[fermionCainEnd];
+];
+If[opList[[loopj]][[-1]]==outList[[-1]][[-1]],
+If[Length[opList[[loopj]]]!=3,
+AppendTo[outList,sigmaSwitch[opList[[loopj]]]];
+opList=Delete[opList,loopj];
+loopj=1;
+Goto[fermionCainEnd],
+(*ending fermion*)
+AppendTo[outList,opList[[loopj]]];
+opList=Delete[opList,loopj];
+Break[];
+];
+];
+loopj++;
+Label[fermionCainEnd]
+];
+];
+loopi++
+];
+loopi=1;
+If[Length[opList]!=0,(*circle case*)
+While[Length[opList]!=0,
+curObj=opList[[loopi]];
+AppendTo[outList,curObj];
+opList=Delete[opList,loopi];
+loopj=1;
+While[loopj<Length[opList]+1,
+If[opList[[loopj]][[-2]]==outList[[-1]][[-1]],
+AppendTo[outList,opList[[loopj]]];
+opList=Delete[opList,loopj];
+loopj=1;
+Goto[circleEnd]
+];
+If[opList[[loopj]][[-1]]==outList[[-1]][[-1]],
+AppendTo[outList,sigmaSwitch[opList[[loopj]]]];
+opList=Delete[opList,loopj];
+loopj=1;
+Goto[circleEnd]
+];
+loopj++;
+Label[circleEnd]
+]
+]
+];
+(*Put D into Right Place*)
+Do[curObj=DList[[i]];
+Do[
+If[curObj[[2]]==outList[[j]][[If[IntegerQ[outList[[j]][[1]]],1,2]]]\[Or](-curObj[[2]]+2np+1)==outList[[j]][[If[IntegerQ[outList[[j]][[1]]],1,2]]],
+outList=Insert[outList,curObj,j];
+Break[];
+]
+,{j,Length[outList]}]
+,{i,Length[DList]}];
+;outList
+];
+ConstructOpInSpinIndexSort[amp_,np_Integer]:=sortSpinorIndex[ConstructOpInSpinIndex[amp,np],np]
+(*Example: (ConstructOpInSpinIndexSort[#,5]/.spinorObj2Op)&/@{ConstructAmp[{1,1,1/2,1/2,0},10,antispinor->{0,1,0,1,0}][[8]]}*)
