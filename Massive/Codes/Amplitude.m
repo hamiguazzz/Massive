@@ -56,11 +56,11 @@ FruleP1MLL[np_] := {
   sb[1, i_]^m_ * ab[1, j_] :> Sum[-sb[1, i]^(m - 1) * sb[k, i] * ab[k, j], {k, 2, np}],
   sb[1, i_] * ab[1, j_]^n_ :> Sum[-ab[1, j]^(n - 1) * sb[k, i] * ab[k, j], {k, 2, np}],
   sb[1, i_]^m_ * ab[1, j_]^n_ :> Sum[-sb[1, i]^(m - 1) * ab[1, j]^(n - 1) * sb[k, i] * ab[k, j], {k, 2, np}]};
-FruleP3MLL[np_] := Join[{
+FruleP3MLL[np_] := {
   sb[2, 3] * ab[2, 3] :> Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}],
   sb[2, 3]^m_ * ab[2, 3] :> sb[2, 3]^(m - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}],
   sb[2, 3] * ab[2, 3]^n_ :> ab[2, 3]^(n - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}],
-  sb[2, 3]^m_ * ab[2, 3]^n_ :> sb[2, 3]^(m - 1) ab[2, 3]^(n - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}]}];
+  sb[2, 3]^m_ * ab[2, 3]^n_ :> sb[2, 3]^(m - 1) ab[2, 3]^(n - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}]};
 ruleSchAMLL = {
   ab[i_, l_] * ab[j_, k_] /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0
       :> -ab[i, j]ab[k, l] + ab[i, k]ab[j, l],
@@ -80,7 +80,7 @@ Options[MatchtoDdim] = {
   explicitmass -> False,
   fund -> "\[Lambda]t",
   mass -> All};
-MatchtoDdim[np_, OptionsPattern[]] := MatchtoDdim[#, np, Table[op -> OptionValue@op, {op, Keys@Options[MatchtoDdim]}]]&;
+MatchtoDdim[np_, opts : OptionsPattern[]] := MatchtoDdim[#, np, FilterRules[{opts}, Options[MatchtoDdim]]]&;
 MatchtoDdim[amp_, np_, OptionsPattern[]] :=
     Module[ {
       massRev, masses = MassOption[OptionValue@mass, np],
@@ -190,10 +190,9 @@ FMreduceWithDict[dict_, amp_, np_Integer] :=
 (*TODO better mass options fit for all massive particle amounts*)
 Options[FMreduce] = {
   tryMax -> 30,
-  fund -> "\[Lambda]t",
-  mass -> All,
   parallelized -> False
 };
+FMreduce[np_Integer, opts : OptionsPattern[]] := FMreduce[# , np, FilterRules[{opts}, Options[FMreduce]]]&;
 FMreduce[amp_Integer, np_Integer, OptionsPattern[]] := amp;
 FMreduce[amp_, np_Integer, OptionsPattern[]] :=
     Module[ {F = amp, F1, iter = 1, dispRules, applyFun},

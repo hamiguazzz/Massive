@@ -3,6 +3,7 @@
 If[!Global`$DEBUG, BeginPackage["MassiveBasis`"];];
 Print["Loading MassiveBasis..."];
 
+{Amp2MetaInfo, Amp2WeylOp};
 {ConstructIndependentBasis};
 {
   GetMassiveIdenticalRules,
