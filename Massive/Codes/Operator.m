@@ -310,9 +310,35 @@ spinorObj2Op = {
   {"\[Phi]", i_} :> Subscript["\[Phi]", i],
   {"Tr"} -> "Tr"};
 
+WeylOp2spinorObj[op_] := Module[{oplist = Prod2List[op], dict, IndexSymbol2Int, fun},
+  dict = {
+    Subscript[Subscript[SuperPlus["\[Psi]"], n_], i_] :> {n, 1 / 2, i},
+    Subscript[Subscript[SuperMinus["\[Psi]"], n_], i_] :> {n, -1 / 2, i},
+    Subscript[Subscript["D", n_], i_] :> {"D", n, i},
+    Subscript[Subscript["A", n_], i_] :> {"A", n, i},
+    Subscript[Superscript["\[Sigma]", LI_], List[S1_, S2_]] :> {"\[Sigma]", LI, S1, S2},
+    Subscript[Superscript[OverBar["\[Sigma]"], LI_], List[S1_, S2_]] :> {"\[Sigma]Bar", LI, S1, S2},
+    Subscript[Superscript["\[Sigma]", {L1_, L2_}], List[S1_, S2_]] :> {"\[Sigma]", L1, L2, S1, S2},
+    Subscript[Superscript[OverBar["\[Sigma]"], {L1_, L2_}], List[S1_, S2_]] :> {"\[Sigma]Bar", L1, L2, S1, S2},
+    Subscript[Subscript[SuperPlus["F"], n_], {i_, j_}] :> {"F+", n, i, j},
+    Subscript[Subscript[SuperMinus["F"], n_], {i_, j_}] :> {"F-", n, i, j},
+    Subscript["\[Phi]", i_] :> {"\[Phi]", i},
+    "Tr" -> {"Tr"}
+  };
+  IndexSymbol2Int[head_String, sym_List] := IndexSymbol2Int[head] /@ sym;
+  IndexSymbol2Int[head_String] := IndexSymbol2Int[head, #]&;
+  IndexSymbol2Int[head_String, sym_] :=
+      If[StringMatchQ[ToString@sym, head ~~ _],
+        ToExpression@StringReplace[ToString@sym, head ~~ i_ -> i],
+        sym
+      ];
+  fun = Flatten @ IndexSymbol2Int["SI"] @ IndexSymbol2Int["LI"] @ (# /. dict)&;
+  (fun /@ oplist) // Return;
+];
+
 (*Example: Dot@@(ConstructOpInSpinIndex[#,5]/.spinorObj2Op)&/@ConstructAmp[{1,1,1/2,1/2,0},10,antispinor->{0,1,0,1,0}]*)
 ClearAll[sortSpinorIndex];
-Options[sortSpinorIndex] = {traceLabel -> False};
+Options[sortSpinorIndex] = {factor -> False, traceLabel -> False};
 sortSpinorIndex[opListIn_, np_Integer, OptionsPattern[]] :=
     Module[
       {
@@ -427,13 +453,15 @@ sortSpinorIndex[opListIn_, np_Integer, OptionsPattern[]] :=
         , {j, Length[outList]}]
         , {i, Length[DList]}];
       ;
-      (*Append[outList,opListIn[[-1]]]*)(*factor seems not useful*)
-      outList
+      (*factor seems not useful*)
+      (*factors are used relatively in amp polynomials *)
+      If[OptionValue@factor, AppendTo[outList, fac]];
+      Return[outList];
     ];
-Options[ConstructOpInSpinIndexSort] = {traceLabel -> True};
-ConstructOpInSpinIndexSort[amp_, np_Integer, OptionsPattern[]] :=
+Options[ConstructOpInSpinIndexSort] = {factor -> False, traceLabel -> True};
+ConstructOpInSpinIndexSort[amp_, np_Integer, opts : OptionsPattern[]] :=
     If[OptionValue@traceLabel == True,
-      sortSpinorIndex[ConstructOpInSpinIndex[amp, np], np, traceLabel -> True]]
+      sortSpinorIndex[ConstructOpInSpinIndex[amp, np], np, FilterRules[{opts}, Options[sortSpinorIndex]]]];
 
 (*Example: (ConstructOpInSpinIndexSort[#,5]/.spinorObj2Op)&/@{ConstructAmp[{1,1,1/2,1/2,0},10,antispinor->{0,1,0,1,0}][[8]]}*)
 
@@ -484,5 +512,10 @@ SpinorObj2FeynCalField[opListIn_] :=
            {ConstructAmp[{1, 1, 1/2, 1/2, 0}, 10, antispinor -> {0, 1, 0, 1, 0}][[8]]})[[1]]
            // SpinorObj2FeynCalField)) // TraditionalForm*)
 
-Amp2WeylOp[amp_, np_Integer] := Times @@ (ConstructOpInSpinIndexSort[amp, np] /. spinorObj2Op);
-Amp2WeylOp[np_Integer] := Amp2WeylOp[#, np]&;
+Options[Amp2WeylOp] = {factor -> False, traceLabel -> True};
+Amp2WeylOp[amp_, np_Integer, opts : OptionsPattern[]] :=
+    Times @@
+        (ConstructOpInSpinIndexSort[amp, np, FilterRules[{opts}, Options@ConstructOpInSpinIndexSort]]
+            /. spinorObj2Op);
+Amp2WeylOp[amps_Plus, np_Integer, opts : OptionsPattern[]] := Amp2WeylOp[np, opts] /@ Sum2List[amps] // Total;
+Amp2WeylOp[np_Integer, opts : OptionsPattern[]] := Amp2WeylOp[#, np, opts]&;

@@ -26,7 +26,7 @@ ConstructIndependentBasis[spins_, operDim_, identical_ : {}] :=
       np = Length@spins,
       identicalList, physicalBasisIndex, externalDict = <||>,
       getCoordinateMatrix, rules, result, matrixDict, operatorDict, exprDict, totalOperator,
-      cfBasisCoordinates, cfBasis, totalCoordinates, permutedBasis, independentPermutedBasis
+      cfBasisCoordinates, cfBasis, totalCoordinates, independentPermutedBasis
     },
 
       getCoordinateMatrix = ConstructBasis[spins, operDim, externalReduceDict -> externalDict, permutation -> #] &;
@@ -52,10 +52,9 @@ ConstructIndependentBasis[spins_, operDim_, identical_ : {}] :=
       cfBasisCoordinates = result[[2]][[1]][[1]][[1]];
       cfBasis = result[[2]][[1]][[1]][[2]]["basis"];
       totalCoordinates = totalOperator . cfBasisCoordinates;
-      permutedBasis = totalOperator . cfBasis;
       physicalBasisIndex = PositionOperatorPhysicalDim[result[[2]][[1]][[1]]];
       independentPermutedBasis =
-          permutedBasis[[#]] & /@
+          cfBasis[[#]] & /@
               Intersection[physicalBasisIndex, Flatten[Position[#, Except[0, _?NumericQ], 1, 1] & /@
                   RowReduce@Transpose@totalCoordinates ]];
       Return[independentPermutedBasis];

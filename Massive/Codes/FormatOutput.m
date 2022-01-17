@@ -26,10 +26,11 @@ Number2Greek = If[#2 > 0, #1 <> ToString[#2], #1] &[Alphabet["Greek"][[Mod[11 + 
 numberLorentzIndex[x_] := StringSplit[x, "LI"] // First // ToExpression;
 Index2Greek[x_] := x // ToString // numberLorentzIndex // Number2Greek // TeXForm // ToString[#]&;
 
-
+ExportWelyOp2Tex[weylop_Plus] := (ExportSpinorObj2Tex@WeylOp2spinorObj@#)& /@ Sum2List[weylop] // StringRiffle[#, "+"]&;
+ExportWelyOp2Tex[weylop_] := ExportSpinorObj2Tex@WeylOp2spinorObj@weylop;
 ExportSpinorObj2Tex[SpinorOpList_] := Module[{
   opList, dic, curObj, outList, trList
-  },
+},
   dic = {
     {n_Integer, 1 / 2, i_} :> "\\psi^+",
     {n_Integer, -(1 / 2), i_} :> "\\psi^-",
@@ -63,6 +64,6 @@ ExportSpinorObj2Tex[SpinorOpList_] := Module[{
       If[Length[opList] == 0, AppendTo[trList, curObj /. dic];
       Break[]]
     ];
-    AppendTo[outList, {"\\text{Tr}(", trList, ")"}]];
+    AppendTo[outList, {"\\operatorname{Tr}\\left(", trList, "\\right)"}]];
   Return[StringJoin[outList] // TraditionalForm];
 ];
