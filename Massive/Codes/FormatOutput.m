@@ -26,14 +26,14 @@ Number2Greek = If[#2 > 0, #1 <> ToString[#2], #1] &[Alphabet["Greek"][[Mod[11 + 
 numberLorentzIndex[x_] := StringSplit[x, "LI"] // First // ToExpression;
 Index2Greek[x_] := x // ToString // numberLorentzIndex // Number2Greek // TeXForm // ToString[#]&;
 
-ExportWelyOp2Tex[weylop_Plus] := (ExportSpinorObj2Tex@WeylOp2spinorObj@#)& /@ Sum2List[weylop] // StringRiffle[#, "+"]&;
-ExportWelyOp2Tex[weylop_] := ExportSpinorObj2Tex@WeylOp2spinorObj@weylop;
+ExportWelyOp2Tex[weylop_Plus] := (ExportSpinorObj2Tex@#)& /@ Sum2List[weylop] // StringRiffle[#, "+"]&;
+ExportWelyOp2Tex[weylop_] := ExportSpinorObj2Tex@weylop;
 ExportSpinorObj2Tex[SpinorOpList_] := Module[{
   opList, dic, curObj, outList, trList
 },
   dic = {
-    {n_Integer, 1 / 2, i_} :> "\\psi^+",
-    {n_Integer, -(1 / 2), i_} :> "\\psi^-",
+    {n_Integer, 1 / 2, i_} :> "\\psi^+_" <> ToString[n],
+    {n_Integer, -(1 / 2), i_} :> "\\psi^-_" <> ToString[n],
     {"D", n_, i_} :> "D_{" <> Index2Greek[i] <> "}",
     {"A", n_, i_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}",
     {"\[Sigma]", LI_, S1_, S2_} :> "\\gamma^{" <> Index2Greek[LI] <> "}",
@@ -49,7 +49,7 @@ ExportSpinorObj2Tex[SpinorOpList_] := Module[{
   opList = Drop[SpinorOpList, 1];
   While[curObj != {"Tr"},
     AppendTo[outList, curObj /. dic];
-    If[Length[opList] == 0, Return[StringJoin[outList] // TraditionalForm]];
+    If[Length[opList] == 0, Return[StringJoin[outList]]];
     curObj = opList[[1]];
     opList = Drop[opList, 1];
   ];
@@ -64,6 +64,13 @@ ExportSpinorObj2Tex[SpinorOpList_] := Module[{
       If[Length[opList] == 0, AppendTo[trList, curObj /. dic];
       Break[]]
     ];
-    AppendTo[outList, {"\\operatorname{Tr}\\left(", trList, "\\right)"}]];
-  Return[StringJoin[outList] // TraditionalForm];
+    outList = Join[outList, {"\\operatorname{Tr}\\left("}, trList, {"\\right)"}];
+  ];
+  Return[StringJoin[outList]];
 ];
+
+(*Example: "\\begin{array}{c}\n \t" <>
+     StringRiffle[#, "\\\\ \n\t"] &@(# /. TraditionalForm[x_] -> x &@
+      ExportWelyOp2Tex /@ (Amp2WeylOp[4]@# & /@
+       ConstructIndependentBasis[{1, 1, 0, 0},
+        6, {{1, 2}, {3, 4}}])) <> "\n\\end{array}" // TraditionalForm*)
