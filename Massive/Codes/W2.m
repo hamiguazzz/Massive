@@ -60,8 +60,8 @@ W2Matrix[spins_, bhDim_, ind_] := Module[
   bhBasis = ConstructAmp[spins, bhDim];
   bhBasisHigher = ConstructAmp[spins, bhDim + 2];
   rdict = <||>;
-  mbhBasis = FMreduceWithDict[rdict, Expand@#, np]& /@ (Mandelstam[ind] * bhBasis);
-  w2bhBasis = FMreduceWithDict[rdict, Expand@W2[#, ind, np], np]& /@ (bhBasis);
+  mbhBasis = ReduceWithDict[rdict, Expand@#, np]& /@ (Mandelstam[ind] * bhBasis);
+  w2bhBasis = ReduceWithDict[rdict, Expand@W2[#, ind, np], np]& /@ (bhBasis);
   mbhBasisCoor = FindCor[bhBasisHigher] /@ mbhBasis;
   w2bhBasisCoor = FindCor[bhBasisHigher] /@ w2bhBasis;
   Return[Transpose@LinearSolve[Transpose@mbhBasisCoor, Transpose@w2bhBasisCoor]];

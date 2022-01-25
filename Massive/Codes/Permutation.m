@@ -269,7 +269,7 @@ GetIndependentPermutedOperatorDict[identicalParticleLists_List, nTotal_Integer, 
           1 -> IdentityMatrix[Length@coors[[1]]],
           symPermuteFirst -> PFirst,
           symPermuteAll[-1 + Length@identicalParticleList] -> PAll
-        }//DeleteDuplicates;
+        } // DeleteDuplicates;
         , {identicalParticleList, identicalParticleLists}];
       Return[operatorDict];
     ];
@@ -292,4 +292,15 @@ GetTotalPermutedPolyDict[identicalParticleLists_List] := Module[
     polyDict[identicalParticleList] = 1 / (Length@swapPoly) * swapPoly;
     , {identicalParticleList, identicalParticleLists}];
   Return[polyDict];
-]
+];
+
+ReplaceBraNumber[expr_Power, rules_] :=
+    Times @@ (ReplaceBraNumber[rules] /@ Prod2List[expr]);
+ReplaceBraNumber[expr_Plus, rules_] :=
+    Total@(ReplaceBraNumber[rules] /@ Sum2List[expr]);
+ReplaceBraNumber[expr_Times, rules_] :=
+    Times @@ (ReplaceBraNumber[rules] /@ Prod2List[expr]);
+ReplaceBraNumber[rules_] := ReplaceBraNumber[#, rules] &;
+ReplaceBraNumber[expr_List, rules_] := ReplaceBraNumber[rules] /@ expr;
+ReplaceBraNumber[expr_, rules_] /; NumberQ[expr] := expr;
+ReplaceBraNumber[expr_, rules_] := expr /. rules;
