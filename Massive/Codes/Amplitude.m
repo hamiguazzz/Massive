@@ -2,9 +2,9 @@ LogPri["Amplitude Loaded"];
 
 (* ::Section:: *)
 (*Construct Amplitude*)
-MassOption[masses_List, np_] /; StringQ[masses[[1]]] := masses;
-MassOption[massesless_List, np_] /; IntegerQ[massesless[[1]]] := Table[
-  If[MemberQ[massesless, i], 0, "\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)"],
+MassOption[masses_List, np_] /; (StringQ[masses[[1]]] || SymbolQ[masses[[1]]]):= masses;
+MassOption[massiveParticles_List, np_] /; IntegerQ[massiveParticles[[1]]] := Table[
+  If[!MemberQ[massiveParticles, i], 0, "\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)"],
   {i, np}];
 MassOption[All, np_] := Table["\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)", {i, np}];
 

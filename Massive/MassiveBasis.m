@@ -3,11 +3,12 @@
 If[!Global`$DEBUG, BeginPackage["MassiveBasis`"];];
 Print["Loading MassiveBasis..."];
 
-{Amp2MetaInfo, Amp2WeylOp};
-{ConstructIndependentBasis};
+{ConvertMassiveId2Massless, ExportWelyOp2Tex, ExportSpinorObj2Tex};
+{Amp2BrasList, Amp2MetaInfo, Amp2WeylOp, SpinorObj2FeynCalField, ConstructOpInSpinIndexSort};
+{ConstructIndependentBasis, PositionOperatorPhysicalDim};
 {ConstructBasis};
+{MassOption, ConstructAmp , FindCor, MatchCFDim, ReduceSt, ReduceWithDict, ReduceToBH};
 {ab, sb};
-{MassOption, ConstructAmp , FindCor, MatchCFDim, ReduceSt, ReduceWithDict};
 {Sum2List, Prod2List, CountHead, FactorizeBracket, FindCoordinate};
 
 $MassiveVerbose = False;

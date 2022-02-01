@@ -13,34 +13,46 @@ Amp2BrasList[amp_] :=
 BreakBracket[bra_] := {bra[[0]], bra[[1]], bra[[2]]};
 (*Free sb = spin*2-antispinor*)
 (*Free ab = antispinor*)
-Amp2MetaInfo[amp_, np_Integer] := Module[{rule, braList , particleList, massiveParticleList, spins, antispinors},
+Options[Amp2MetaInfo] = {mass -> All};
+Amp2MetaInfo[amp_, np_Integer, OptionsPattern[]] := Module[
+  {masses, rule, braList , fun, particleList, massiveParticleList, spins, antispinors},
+  masses = MassOption[OptionValue@mass, np];
   braList = BreakBracket /@ Amp2BrasList[amp][[2]];
   rule[type_, ind_] := {type, ind, _} | {type, _, ind};
   particleList = Table[{Count[braList, rule[sb, i]] , Count[braList, rule[ab, i]]}, {i, np}];
   massiveParticleList = Table[Count[braList, rule[sb, i]], {i, Range[2 * np, np + 1, -1]}];
-  {spins, antispinors} = Transpose@MapThread[{#2 + (#1[[2]] - #1[[1]]), #1[[2]] - #1[[1]]}&, {particleList, massiveParticleList}];
+  fun[particleList : {nSb_, nAb_}, nMassive_, thisMass_] :=
+      If[thisMass === 0,
+        {(nSb - nAb) / 2, 0}
+        ,
+        {(nMassive + nAb - nSb) / 2, nAb - nSb}
+      ];
+  {spins, antispinors} = Transpose@MapThread[fun, {particleList, massiveParticleList, masses}];
   If[Count[spins, Negative] + Count[antispinors, Negative] > 0, Return[Null]];
-  Return[{spins / 2, antispinors}];
+  Return[{spins , antispinors}];
 ];
 
-FindPsiChain[amp_, np_Integer] := Module[
+Options[FindPsiChain] = {mass -> All};
+FindPsiChain[amp_, np_Integer, OptionsPattern[]] := Module[
   {
+    masses, GenLeftExternalNumber, PopStack, EmptyStackQ,
+    spins, antispinors,
+    extSbStack, extAbStack,
     FindNextHeadTarget, ExistNextTargetQ, ConsumeNextTarget, ExtendChainStep,
     FactorMatchQ,
-    leftExternal,
-    spins, antispinors,
     target, targetParticle = Null, targetBraType = Null,
     targetParticle2 = Null, targetBraType2 = Null,
     circleHead,
     chains = {},
     bras, factor, sigmas
   },
+  masses = MassOption[OptionValue@mass, np];
   {factor, bras} = Amp2BrasList[amp];
+  {spins, antispinors} = Amp2MetaInfo[amp, np, mass -> OptionValue@mass];
+  bras = BreakBracket /@ bras;
   If[Length@bras < 2,
     Return[{factor, bras, {1}}]
   ];
-  {spins, antispinors} = Amp2MetaInfo[amp, np];
-  bras = BreakBracket /@ bras;
   FactorMatchQ[bra_, matchrule_] :=
       If[ MatchQ[bra, matchrule],
         True,
@@ -50,34 +62,74 @@ FindPsiChain[amp_, np_Integer] := Module[
           False
         ]
       ];
-  (*left amount {{8, 7, 6, ...},{1, 2, 3, ...}}*)
-  leftExternal = Transpose @ Table[{2 * spins[[i]] - antispinors[[i]], antispinors[[i]]}, {i, np}];
-  (*Get head*)
-  FindNextHeadTarget[] := Block[{rule, externalIndex},
-    While[True,
-      externalIndex = FirstPosition[leftExternal[[1]], Except[0, _Integer], {-1}, 1][[1]];
-      If[externalIndex != -1,
-        leftExternal[[1]][[externalIndex]]--;
-        targetBraType = sb;
-        targetParticle = 2 * np + 1 - externalIndex;
-        ,
-        externalIndex = FirstPosition[leftExternal[[2]], Except[0, _Integer], {-1}, 1][[1]];
-        If[externalIndex != -1,
-          leftExternal[[2]][[externalIndex]]--;
-          targetBraType = ab;
-          targetParticle = externalIndex;
+
+  (*maintain left external field amounts by stacks*)
+  (*{sbs,abs}*)
+  GenLeftExternalNumber[index_] :=
+      If[masses[[index]] === 0,
+        If[spins[[index]] >= 0,
+          {ConstantArray[index, spins[[index]] * 2], {}}
           ,
-          targetBraType = targetParticle = Null;
-          targetBraType2 = targetParticle2 = Null;
-          Return[False];
-        ];
+          {{}, ConstantArray[index, spins[[index]] * -2]}
+        ]
+        ,
+        {ConstantArray[2 * np + 1 - index, spins[[index]] * 2 - antispinors[[index]]],
+          {ConstantArray[index, antispinors[[index]]]}}
       ];
-      If[ExistNextTargetQ[targetBraType, targetParticle],
-        chains ~ AppendTo ~ {targetBraType};
-        Return[True];
-      ]
-    ];
-  ];
+  EmptyStackQ[stack_] := stack[[1]] == Length@stack[[2]];
+  PopStack[stack_] := stack[[2]][[++stack[[1]]]];
+  SetAttributes[PopStack, HoldFirst];
+  {extSbStack, extAbStack} = Flatten /@ (Transpose @ (GenLeftExternalNumber /@ Range[1, np]));
+  extSbStack = {0, extSbStack}; extAbStack = {0, extAbStack};
+  (*  Print["leftExternal:", "\n", extSbStack, "\n", extAbStack];*)
+  FindNextHeadTarget[] :=
+      With[{},
+        While[True,
+          If[!EmptyStackQ[extSbStack],
+            targetBraType = sb;
+            targetParticle = PopStack[extSbStack];
+            ,
+            If[!EmptyStackQ[extAbStack],
+              targetBraType = ab;
+              targetParticle = PopStack[extAbStack];
+              ,
+              targetBraType = targetParticle = Null;
+              targetBraType2 = targetParticle2 = Null;
+              Return[False];
+            ]
+          ];
+          If[ExistNextTargetQ[targetBraType, targetParticle],
+            chains ~ AppendTo ~ {targetBraType};
+            Return[True];
+          ]
+        ]
+      ];
+  (*Get head*)
+  (*  FindNextHeadTarget[] := Block[{externalIndex},*)
+  (*    While[True,*)
+  (*      externalIndex = FirstPosition[extSbStack[[1]], Except[0, _Integer], {-1}, 1][[1]];*)
+  (*      If[externalIndex != -1,*)
+  (*        extSbStack[[1]][[externalIndex]]--;*)
+  (*        targetBraType = sb;*)
+  (*        targetParticle = 2 * np + 1 - externalIndex;*)
+  (*        ,*)
+  (*        externalIndex = FirstPosition[extSbStack[[2]], Except[0, _Integer], {-1}, 1][[1]];*)
+  (*        If[externalIndex != -1,*)
+  (*          extSbStack[[2]][[externalIndex]]--;*)
+  (*          targetBraType = ab;*)
+  (*          targetParticle = externalIndex;*)
+  (*          ,*)
+  (*          targetBraType = targetParticle = Null;*)
+  (*          targetBraType2 = targetParticle2 = Null;*)
+  (*          Return[False];*)
+  (*        ];*)
+  (*      ];*)
+  (*      If[ExistNextTargetQ[targetBraType, targetParticle],*)
+  (*        chains ~ AppendTo ~ {targetBraType};*)
+  (*        Return[True];*)
+  (*      ]*)
+  (*    ];*)
+  (*  ];*)
 
   (*test whether exists next target bra, no side effect*)
   ExistNextTargetQ[targetBraTypeInner_, targetParticleInner_] := Block[{targetInner, rule, factorList},
@@ -144,12 +196,12 @@ FindPsiChain[amp_, np_Integer] := Module[
   ];
   Return[{factor, chains, sigmas}]
 ];
-FindPsiChain[np_Integer] := FindPsiChain[#, np]&;
+FindPsiChain[np_Integer, opts : OptionsPattern[]] := FindPsiChain[#, np, Sequence @@ FilterRules[{opts}, Options[FindPsiChain]]]&;
 
 (*For antispinor 1 (A case), use spin = -/+ 1 is fine in spins_List, \
 as A is not determined from antispinor but from psiChain{ab,1,xx,8,sb} structure*)
-
-ConstructOpInSpinIndex[amp_, np_Integer, spins_List] :=
+Options[ConstructOpInSpinIndex] = {mass -> All};
+ConstructOpInSpinIndex[amp_, np_Integer, spins_List, OptionsPattern[]] :=
 
     Module[
       {
@@ -159,7 +211,7 @@ ConstructOpInSpinIndex[amp_, np_Integer, spins_List] :=
         testAbSb
       },
       (*Make Psi chain*)
-      psiChain = FindPsiChain[amp, np];
+      psiChain = FindPsiChain[amp, np, mass -> OptionValue@mass];
       (*Print["psiChian Found: ",psiChain];*)
       chains = psiChain[[2]];
       findPtclSpin[ptcl_] :=
@@ -293,8 +345,12 @@ ConstructOpInSpinIndex[amp_, np_Integer, spins_List] :=
       Append[opList, psiChain[[1]]]
     ];
 
-ConstructOpInSpinIndex[amp_, np_Integer] :=
-    ConstructOpInSpinIndex[amp, np, #[[1]] * (#[[2]] /. {1 -> -1, 2 -> -1, 0 -> 1}) &[Amp2MetaInfo[amp, np]]];
+ConstructOpInSpinIndex[amp_, np_Integer, opts : OptionsPattern[]] :=
+    ConstructOpInSpinIndex[amp, np,
+      #[[1]] * (#[[2]] /. {1 -> -1, 2 -> -1, 0 -> 1}) &
+      [Amp2MetaInfo[amp, np, Sequence @@ FilterRules[{opts}, Options[Amp2MetaInfo]]]],
+      Sequence @@ FilterRules[{opts}, Options[ConstructOpInSpinIndex]]
+    ];
 
 
 (*spinorObjOpForm is used to prevew spinorObj only*)
@@ -312,7 +368,7 @@ spinorObjOpForm[x_] := Module[{dic},
     {"F-", n_, i_, j_} :> Subscript[Subscript[SuperMinus["F"], n], {i, j}],
     {"\[Phi]", i_} :> Subscript["\[Phi]", i],
     {"Tr"} -> "Tr"};
-  (x/.dic)];
+  (x /. dic)];
 
 
 (*WeylOp2spinorObj[op_] := Module[{oplist = Prod2List[op], dict, IndexSymbol2Int, fun},*)
@@ -463,10 +519,13 @@ sortSpinorIndex[opListIn_, np_Integer, OptionsPattern[]] :=
       If[OptionValue@factor, AppendTo[outList, fac]];
       Return[outList];
     ];
-Options[ConstructOpInSpinIndexSort] = {factor -> False, traceLabel -> True};
+Options[ConstructOpInSpinIndexSort] = {mass -> All, factor -> False, traceLabel -> True};
+(*TODO BUG:what should it do if !OptionValue@traceLabel*)
 ConstructOpInSpinIndexSort[amp_, np_Integer, opts : OptionsPattern[]] :=
     If[OptionValue@traceLabel == True,
-      sortSpinorIndex[ConstructOpInSpinIndex[amp, np], np, FilterRules[{opts}, Options[sortSpinorIndex]]]];
+      sortSpinorIndex[
+        ConstructOpInSpinIndex[amp, np, Sequence @@ FilterRules[{opts}, Options[ConstructOpInSpinIndex]]],
+        np, Sequence @@ FilterRules[{opts}, Options[sortSpinorIndex]]]];
 
 (*Example: (ConstructOpInSpinIndexSort[#,5]/.spinorObj2Op)&/@{ConstructAmp[{1,1,1/2,1/2,0},10,antispinor->{0,1,0,1,0}][[8]]}*)
 
@@ -517,8 +576,8 @@ SpinorObj2FeynCalField[opListIn_] :=
            {ConstructAmp[{1, 1, 1/2, 1/2, 0}, 10, antispinor -> {0, 1, 0, 1, 0}][[8]]})[[1]]
            // SpinorObj2FeynCalField)) // TraditionalForm*)
 
-Options[Amp2WeylOp] = {factor -> False, traceLabel -> True};
+Options[Amp2WeylOp] = {mass -> All, factor -> False, traceLabel -> True};
 Amp2WeylOp[amp_, np_Integer, opts : OptionsPattern[]] :=
-        (ConstructOpInSpinIndexSort[amp, np, FilterRules[{opts}, Options@ConstructOpInSpinIndexSort]]);
+    (ConstructOpInSpinIndexSort[amp, np, Sequence @@ FilterRules[{opts}, Options@ConstructOpInSpinIndexSort]]);
 Amp2WeylOp[amps_Plus, np_Integer, opts : OptionsPattern[]] := Amp2WeylOp[np, opts] /@ Sum2List[amps] // Total;
 Amp2WeylOp[np_Integer, opts : OptionsPattern[]] := Amp2WeylOp[#, np, opts]&;
