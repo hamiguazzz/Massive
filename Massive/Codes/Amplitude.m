@@ -2,7 +2,11 @@ LogPri["Amplitude Loaded"];
 
 (* ::Section:: *)
 (*Construct Amplitude*)
-MassOption[masses_List, np_] /; (StringQ[masses[[1]]] || SymbolQ[masses[[1]]]):= masses;
+MassOption[masses_List, np_] :=
+    If[np > Length@masses,
+      masses ~ Join ~ ConstantArray[0, np - Length@masses],
+      masses[[1 ;; np]]
+    ];
 MassOption[massiveParticles_List, np_] /; IntegerQ[massiveParticles[[1]]] := Table[
   If[!MemberQ[massiveParticles, i], 0, "\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)"],
   {i, np}];
@@ -17,6 +21,7 @@ ConstructAmp[spins_, ampDim_, OptionsPattern[]] :=
       If[np < 4, Return[Null]];
       masses = MassOption[OptionValue@mass, np];
       antispinors = If[OptionValue@antispinor === None, ConstantArray[0, np], OptionValue@antispinor];
+      If[!CheckAmpConstruction[spins, ampDim, antispinors, masses], Return[{}]];
       para = InnerConstructAmp[spins, antispinors, np, ampDim, masses];
       If[ Length@Select[para, Negative[#]&] != 0,
         Return[{}]
@@ -30,6 +35,19 @@ ConstructAmp[spins_, ampDim_, OptionsPattern[]] :=
       Return[amps];
     ];
 
+CheckAmpConstruction[spins_, ampDim_, antispinors_, masses_] := Module[{np, minDim},
+  np = Length@spins;
+  If[np < 3 || np != Length@antispinors || np != Length@masses, Return[False]];
+  minDim = np + Total@spins;
+  If[ampDim < minDim || OddQ[ampDim + Total@antispinors - minDim], Return[False]];
+  If[0 =!= MapThread[If[#3 == 0, #2 =!= #1 && #2 =!= 0, #2 > #1 || #2 < 0]& , {2 * spins, antispinors, masses}] /. {True
+      -> 1,
+    False -> 0} // Total,
+    Return[False];
+  ];
+  Return[True];
+];
+
 InnerConstructAmp[spins_, antispinors_, np_, ampDim_, masses_] :=
     Module[ {Left, Right},
       Right = (ampDim - np + Total@spins - Total@antispinors) / 2;
@@ -38,7 +56,8 @@ InnerConstructAmp[spins_, antispinors_, np_, ampDim_, masses_] :=
           Table[
             If[ masses[[i]] =!= 0,
               Left - antispinors[[i]],
-              Left + 2 spins[[i]]],
+              Left + 2 * spins[[i]] - 2 * antispinors[[i]]
+            ],
             {i, np}] ~ Join ~
           Table[
             If[  masses[[i]] =!= 0,

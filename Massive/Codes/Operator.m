@@ -23,7 +23,10 @@ Amp2MetaInfo[amp_, np_Integer, OptionsPattern[]] := Module[
   massiveParticleList = Table[Count[braList, rule[sb, i]], {i, Range[2 * np, np + 1, -1]}];
   fun[particleList : {nSb_, nAb_}, nMassive_, thisMass_] :=
       If[thisMass === 0,
-        {(nSb - nAb) / 2, 0}
+        If[nAb > nSb,
+          (nAb - nSb) * {1 / 2, 1},
+          {(nSb - nAb) / 2, 0}
+        ]
         ,
         {(nMassive + nAb - nSb) / 2, nAb - nSb}
       ];
@@ -67,10 +70,10 @@ FindPsiChain[amp_, np_Integer, OptionsPattern[]] := Module[
   (*{sbs,abs}*)
   GenLeftExternalNumber[index_] :=
       If[masses[[index]] === 0,
-        If[spins[[index]] >= 0,
+        If[antispinors[[index]] === 0,
           {ConstantArray[index, spins[[index]] * 2], {}}
           ,
-          {{}, ConstantArray[index, spins[[index]] * -2]}
+          {{}, ConstantArray[index, spins[[index]] * 2]}
         ]
         ,
         {ConstantArray[2 * np + 1 - index, spins[[index]] * 2 - antispinors[[index]]],

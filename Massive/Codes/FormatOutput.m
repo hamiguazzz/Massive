@@ -1,6 +1,6 @@
 LogPri["FormatOutput Loaded"];
 
-ConvertMassiveId2Massless[expr_, np_] := expr /. Table[np * 2 + 1 - i -> i, {i, np}];
+ConvertMassiveId2Massless[expr_, np_] := ReplaceBraNumber[expr, Table[np * 2 + 1 - i -> i, {i, np}]];
 
 (*
 \newcommand{\abk}[1] {\left\langle #1\right\rangle}
