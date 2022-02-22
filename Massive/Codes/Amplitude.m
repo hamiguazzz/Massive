@@ -277,13 +277,13 @@ ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]]
         kernels = Length[Kernels[]];
       ];
       If[ OptionValue@withDict === False,
-        LogPri["Direct decomposition..."];
+        If[OptionValue@log, LogPri["Direct decomposition..."];];
         reduceFun =
             FindCor[bhBasis]@
                 ReduceSt[#, np, parallelized -> False, tryMax -> OptionValue@tryMax] &;
         (*SetSharedVariable[ampsFromDict, separateAmpCalcList, amps]*);
-        LogPri["U(N) heads over ", OptionValue@maxntcount,
-          " will be calculated separately."];
+        If[OptionValue@log, LogPri["U(N) heads over ", OptionValue@maxntcount,
+          " will be calculated separately."];];
         ParallelDo[
           dealingAmp = amps[[i]];
           If[CountHead[If[ OptionValue@fund === "\[Lambda]t",
@@ -291,33 +291,28 @@ ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]]
             sb
           ]]@dealingAmp <= OptionValue@maxntcount,
             coorDict ~ AssociateTo ~ (dealingAmp -> reduceFun@dealingAmp)
-                // AbsoluteTiming
-                // If[OptionValue@log, LogPri[ampsFromDict[dealingAmp], " cost ", #[[1]]]&, Identity];
             ,
             separateAmpCalcList ~ AppendTo ~ dealingAmp;
           ], {i, Length[amps]}
           , DistributedContexts -> Automatic]
             // AbsoluteTiming // First
-            // LogPri["part1 N=", Length[amps] - Length[separateAmpCalcList],
-          " costs:", #] &;
+            // If[OptionValue@log, LogPri["part1 N=", Length[amps] - Length[separateAmpCalcList],
+          " costs:", #]] &;
         reduceFun =
             FindCor[bhBasis]@
                 ReduceSt[#, np, parallelized -> True, tryMax -> OptionValue@tryMax] &;
         Do[
           dealingAmp = separateAmpCalcList[[i]];
-          coorDict ~ AssociateTo ~ (dealingAmp -> reduceFun@dealingAmp) //
-              AbsoluteTiming // If[OptionValue@log, LogPri[ampsFromDict[dealingAmp], " cost ", #[[1]]]&, Identity];
+          coorDict ~ AssociateTo ~ (dealingAmp -> reduceFun@dealingAmp)
           , {i, Length[separateAmpCalcList]}]
             // AbsoluteTiming // First
-            // LogPri["part2 N=", Length[separateAmpCalcList], " costs:", #] &;
+            // If[OptionValue@log, LogPri["part2 N=", Length[separateAmpCalcList], " costs:", #];] &;
         ,
-        LogPri["Dict decomposition..."];
+        If[OptionValue@log, LogPri["Dict decomposition..."];];
         (*Build parallelized fun : reduceFun*)
         reduceFun[dict_, amp_] :=
             coorDict ~ AssociateTo ~ (amp -> FindCor[bhBasis] @
-                ReduceWithDict[dict, amp, np])
-                // AbsoluteTiming
-                // If[OptionValue@log, LogPri[ampsFromDict[amp], " cost ", #[[1]]]&, Identity];
+                ReduceWithDict[dict, amp, np]);
         SetAttributes[reduceFun, HoldFirst];
         Options[reduceFun] = {
           log -> OptionValue@log
@@ -326,7 +321,9 @@ ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]]
         dictSync = OptionValue@externalReduceDict;
         (*Context must contains current package path*)
         SyncDataTask[dictSync, reduceFun, amps, synctask -> OptionValue@synctask,
-          synctime -> OptionValue@synctime, context -> $ContextPath];
+          synctime -> OptionValue@synctime, context -> $ContextPath]
+            // AbsoluteTiming
+            // If[OptionValue@log, LogPri["dict reduction cost ", #[[1]]]]& ;
         Sow[dictSync, "reduceDict"];
       ];
       Return[coorDict];
@@ -410,8 +407,9 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
       cfIndexList = Cases[cfIndexList, {dim_, antiSpinors_} /;
           (MemberQ[bhDimList, dim + Total@antiSpinors])
       ];
-      LogPri["Involved BH basis : ", bhDimList];
-      LogPri["Involved CF basis : ", cfIndexList];
+      If[OptionValue@log,
+        LogPri["Involved BH basis : ", bhDimList];
+        LogPri["Involved CF basis : ", cfIndexList];];
       GenBHBasis[dim_] := ConstructAmp[spins, dim, constructOpts];
       GenCFBasis[dim_, antispinorList_] := ConstructAmp[
         spins, dim, antispinor -> antispinorList, constructOpts];
@@ -420,7 +418,7 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
         bhBasis = bhBasisDict // Values // Flatten;
         cfBasisDict = ParallelMap[(# -> GenCFBasis @@ #)& , cfIndexList] // Association;
         reversedCFBasisDict = ReverseDict[cfBasisDict];
-      ) // AbsoluteTiming // LogPri["Constructing amplitudes costs ", #[[1]]]&;
+      ) // AbsoluteTiming // If[OptionValue@log, LogPri["Constructing amplitudes costs ", #[[1]]];]&;
 
       reduceOpts = Association@ FilterRules[{opts}, Options[ReduceToBH]];
       reduceOpts = If[OptionValue@withDict,
@@ -445,22 +443,22 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
       cfCoordinateDict = ReduceToBH[
         reducedAmpDict, bhBasis, np, reduceOpts] // Reap
           // AbsoluteTiming
-          // (LogPri["Coefficients totally costs:", #[[1]]]; #[[2]])& ;
+          // (If[OptionValue@log, LogPri["Coefficients totally costs:", #[[1]]];];#[[2]])&;
       If[!OptionValue@withDict,
         cfCoordinateDict = cfCoordinateDict[[1]];,
         reduceDict = cfCoordinateDict[[2]][[1]][[1]];
         cfCoordinateDict = cfCoordinateDict[[1]];
       ];
       cfCoordinateDict = Association @ Table[matchedCFDict[e] -> cfCoordinateDict[e], {e, Keys@ reducedAmpDict}];
-      LogPri["Involved CF amplitude amount is ", reversedCFBasisDict // Length];
-      LogPri["Involved BH amplitude amount is ", bhBasis // Length];
+      If[OptionValue@log, LogPri["Involved CF amplitude amount is ", reversedCFBasisDict // Length];
+      LogPri["Involved BH amplitude amount is ", bhBasis // Length];];
       (*      LogPri["Involved BH amplitude amount is ",*)
       (*        Fold[Plus, ConstantArray[0, Length@bhBasis],*)
       (*          Map[((# == 0) /. {True -> 0, False -> 1}) &,*)
       (*            (Values@coordinateDict), {2}]]*)
       (*            // DeleteCases[#, 0] & // Length*)
       (*      ];*)
-      LogPri["Coordinate rank is ", ZRank[Values@cfCoordinateDict]];
+      If[OptionValue@log, LogPri["Coordinate rank is ", ZRank[Values@cfCoordinateDict]]];
       (*Sort*)
       sortedBasis = Keys[cfCoordinateDict] //
           SortBy[(Total@Flatten@reversedCFBasisDict[matchedCFDict[#]])&];
@@ -472,7 +470,7 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
               RowReduce@Transpose@
                   ReplaceAll[sortedCFCoordinates, Table[If[e =!= 0, e -> 1], {e, masses}]]
           ]) // AbsoluteTiming //
-          LogPri["Ranking costs ", #[[1]]]&;
+          If[OptionValue@log, LogPri["Ranking costs ", #[[1]]]]&;
       (*TODO reduce identical particles*)
       (*Select from minimal dimension*)
       (*This should not be done now.  Otherwise the permutation operator matrix will be wrong*)

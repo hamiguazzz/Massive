@@ -204,7 +204,7 @@ GetProjectInnerColorOp[colorIndDict_Association, operatorDict_Association] := Mo
 (* ::Section:: *)
 (*Step5 Combine all*)
 
-Options[ConstructIndependentColoredBasis] = Join[{ythead -> defaultYTHead}, Options@ConstructBasis ,
+Options[ConstructIndependentColoredBasis] = Join[{ythead -> defaultYTHead, log -> False}, Options@ConstructBasis ,
   Options@AuxConstructIdenticalColorBasis] // DeleteDuplicates;
 ConstructIndependentColoredBasis[spins_List, operDim_Integer,
   su3ShapeList_ : {},
@@ -250,7 +250,7 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
   rulesPermutedIdentical = GetMassiveIdenticalRules[#, np]& /@ identicalList // Flatten[#, 1]& // DeleteDuplicates;
   permutedBHs = ParallelTable[ReplaceBraNumber[rule][b], {b, bhBasis}, {rule, rulesPermutedIdentical}] // Flatten;
   permutedBHCoorsDict = ReduceToBH[permutedBHs, bhBasis, np]
-      // AbsoluteTiming // (LogPri["identical reduce cost ", #[[1]]];#[[2]])&;
+      // AbsoluteTiming // (If[OptionValue@log, LogPri["identical reduce cost ", #[[1]]]];#[[2]])&;
   rulePermutedIdenticalCoorsDict = Table[rule -> (permutedBHCoorsDict[#]&) /@ ReplaceBraNumber[rule] /@ bhBasis, {rule, rulesPermutedIdentical}]
       // Association;
   lorIdenticalOpDict = GetIndependentPermutedOperatorDict[identicalList, np, rulePermutedIdenticalCoorsDict[#]&];
@@ -260,15 +260,13 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
   totalIdenticalOpDict = KeyValueMap[
     (#1 -> Table[
       #2[[i]][[1]] ->
-          KroneckerProduct[#2[[i]][[2]],
-            (cfBasisCoordinates.Transpose@
-                ((lorIdenticalOpDict[#1])[[i]][[2]])
-            )],
+          KroneckerProduct[#2[[i]][[2]], lorIdenticalOpDict[#1][[i]][[2]]],
       {i, Length@#2}])&
     , colorIdenticalOpDict] // Association;
-  totalOperator = Dot @@ Table[permuteIdenticalPolyDict[id] /.
-      totalIdenticalOpDict[id], {id, identicalList}];
-
+  totalOperator = (KroneckerProduct[IdentityMatrix@Length@colorBasis, cfBasisCoordinates]). (Dot @@
+      Table[permuteIdenticalPolyDict[id] /.
+          totalIdenticalOpDict[id], {id, identicalList}])
+      // AbsoluteTiming // (If[OptionValue@log, LogPri["calc total op matrix cost ", #[[1]]]];#[[2]])& ;
   (*Expand basis*)
   coloredCfBasis = Table[{color, amp}, {color, colorBasis}, {amp, independentCfBasis}] // Flatten[#, 1]&;
   physicalBasisIndex = Join @@ Table[physicalBasisIndex * i, {i, Length@colorBasis}];
@@ -279,7 +277,7 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
           Flatten[Position[#, Except[0, _?NumericQ], 1, 1]& /@
               RowReduce@Transpose@totalOperator]];,
     independentPermutedBasis = coloredCfBasis[[#]]& /@ physicalBasisIndex;
-  ];
+  ] // AbsoluteTiming // (If[OptionValue@log, LogPri["find independent basis cost ", #[[1]]]];)&;
   Return[independentPermutedBasis];
 ];
 

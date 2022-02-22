@@ -17,9 +17,11 @@ LogPri[mess___] := If[$MassiveVerbose, Print[mess]];
 If[!Global`$DEBUG, Begin["`Private`"]];
 Do[Get[file], {file, Global`$CodeFiles}];
 
-ConstructIndependentBasis[spins_List, operDim_Integer, identical_ : {}] :=
-    ConstructIndependentBasis[ConstructBasis[spins, operDim], identical];
-ConstructIndependentBasis[result : {cfBasisCoordinates_List, data_Association}, identical_ : {}] := Module[
+Options@ConstructIndependentBasis = {log->False};
+ConstructIndependentBasis[spins_List, operDim_Integer, identical_ : {}, opts:OptionsPattern[]] :=
+    ConstructIndependentBasis[ConstructBasis[spins, operDim], identical, opts];
+ConstructIndependentBasis[result : {cfBasisCoordinates_List, data_Association}, identical_ : {}, OptionsPattern[]] :=
+    Module[
   {np, spins, identicalList, physicalBasisIndex, dict,
     bh, permutedBHs, permutedBHCoorsDict, ruleCoorsDict,
     rules, operatorDict, exprDict, totalOperator, independentCfBasis, totalCoordinates, independentPermutedBasis},
