@@ -22,7 +22,7 @@ Outer2InnerMasslessIndexRules[identicalParticleList_List] := Module[
   },
   If[Length@identicalParticleList < 2, Throw[{identicalParticleList, "no identical particle list error"}]];
   particleList =
-      identicalParticleList[[;; -2]] // Sort;
+      If[StringQ@identicalParticleList[[-1]], identicalParticleList[[;; -2]], identicalParticleList] // Sort;
   rules = MapThread[Rule, {particleList, Range[Length@particleList]}]
 ];
 
@@ -32,7 +32,7 @@ Inner2OuterMasslessIndexRules[identicalParticleList_List] := Module[
   },
   If[Length@identicalParticleList < 2, Throw[{identicalParticleList, "no identical particle list error"}]];
   particleList =
-      identicalParticleList[[;; -2]] // Sort;
+      If[StringQ@identicalParticleList[[-1]], identicalParticleList[[;; -2]], identicalParticleList] // Sort;
   rules = MapThread[Rule, {Range[Length@particleList], particleList}]
 ];
 
@@ -44,7 +44,7 @@ Inner2OuterMasslessIndexRules[identicalParticleList_List] := Module[
 (* StandardYangTableaux:GenerateStandardTableaux*)
 TransposeTableaux[tableaux_] := DeleteCases[Transpose[PadRight[#, Length[tableaux[[1]]], Null]& /@ tableaux], Null, -1];
 
-TransposePartition[partition_] := Module[
+InnerTransposePartition[partition_] := Module[
   {n1, n2, inverseP},
   If[partition === {}, Return[{}]];
   n1 = partition[[1]];
@@ -56,7 +56,7 @@ TransposePartition[partition_] := Module[
 (* Returns a Young tableaux with the entries filled with the maximum entry in each square, if the tableaux is to be standard *)
 MaxIndex[partition_] := Module[
   {partitionT, result},
-  partitionT = TransposePartition[partition];
+  partitionT = InnerTransposePartition[partition];
   result = Table[
     Total[partition] - Total[partition[[1 ;; i - 1]]] - Total[partitionT[[1 ;; j - 1]]] + (i - 1)(j - 1)
     , {i, Length[partition]}, {j, partition[[i]]}];
@@ -69,7 +69,7 @@ GenerateStandardTableaux[\[Lambda]_] := Module[
   If[\[Lambda] === {}, Return[{}]];
 
   n = Total[\[Lambda]];
-  \[Lambda]T = TransposePartition[\[Lambda]];
+  \[Lambda]T = InnerTransposePartition[\[Lambda]];
   canonicalTableaux = MapThread[Range, {Accumulate[\[Lambda]] - \[Lambda] + 1, Accumulate[\[Lambda]]}];
   canonicalTableauxT = TransposeTableaux[canonicalTableaux];
 
@@ -233,21 +233,23 @@ GenerateMasslessRule[symPermuteAll[np_]] := Table[i -> Mod[i, np] + 1, {i, np}];
 Massless2MassiveRules[masslessRules_List, npTotal_Integer] :=
     masslessRules ~ Join ~ (masslessRules /. {(n1_ -> n2_) :> (2 * npTotal + 1 - n1 -> 2 * npTotal + 1 - n2)});
 
-GetMassiveIdenticalRules[identicalParticleList_List, npTotal_Integer] := Module[
+GetMasslessIdenticalRules[identicalParticleList_List] := Module[
   {
     np = -1 + Length@identicalParticleList
   },
   If[np < 2, Return[{{}}]];
   If[np == 2,
     Return[ {{}} ~ Join ~ {GenerateMasslessRule[symPermuteFirst]
-        /. Inner2OuterMasslessIndexRules[identicalParticleList]
-        // Massless2MassiveRules[#, npTotal]&}];
+        /. Inner2OuterMasslessIndexRules[identicalParticleList]}];
   ];
   Return[
-    {{}} ~ Join ~ (Massless2MassiveRules[# /. Inner2OuterMasslessIndexRules[identicalParticleList], npTotal]&
-        /@ {GenerateMasslessRule[symPermuteFirst], GenerateMasslessRule[symPermuteAll[np]]})
+    {{}} ~ Join ~ ({GenerateMasslessRule[symPermuteFirst], GenerateMasslessRule[symPermuteAll[np]]}
+        /. Inner2OuterMasslessIndexRules[identicalParticleList])
   ];
 ];
+
+GetMassiveIdenticalRules[identicalParticleList_List, npTotal_Integer] :=
+    Massless2MassiveRules[#, npTotal]& /@ GetMasslessIdenticalRules[identicalParticleList];
 
 
 
@@ -287,11 +289,17 @@ GetTotalPermutedPolyDict[identicalParticleLists_List] := Module[
       _, Throw[{identicalParticleList, "no such identical particle error"}];
     ];
     (* (n,0) or (0,n) rep only one element*)
-    cycPoly = GenerateYoungSymmetrizer@First@GenerateStandardTableaux@yt;
-    swapPoly = SwapRepresentation[cycPoly, np] // SimplifySwapRepresentationPoly;
-    polyDict[identicalParticleList] = 1 / (Length@swapPoly) * swapPoly;
+    polyDict[identicalParticleList] = GetPermutedPolyFromYT[yt] // First;
     , {identicalParticleList, identicalParticleLists}];
   Return[polyDict];
+];
+
+GetPermutedPolyFromYT[ytShape_List] := Module[
+  {np = Total@ytShape, cycPolys, swapPolys, totalPolys},
+  cycPolys = GenerateYoungSymmetrizer /@ GenerateStandardTableaux@ytShape;
+  swapPolys = (SimplifySwapRepresentationPoly@SwapRepresentation[#, np]&) /@ cycPolys;
+  totalPolys = (1 / (Length@#) * #)& /@ swapPolys;
+  Return[totalPolys];
 ];
 
 ReplaceBraNumber[expr_Power, rules_] :=

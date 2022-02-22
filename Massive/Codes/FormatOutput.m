@@ -1,4 +1,11 @@
 LogPri["FormatOutput Loaded"];
+DisplayYT[warpedYt_, h_ : defaultYTHead] /; Head@warpedYt === h := DisplayYT[warpedYt[[1]]];
+DisplayYT[yt_List] := Grid[yt, Frame -> {None, None,
+  Flatten@Table[{i, j} -> True, {i, Length@yt}, {j,
+    Length@yt[[i]]}]}];
+DisplayYT[ytExpr_Plus, h_ : defaultYTHead] := DisplayYT[#, h]& /@ Sum2List[ytExpr] // Total;
+DisplayYT[ytExpr_Times, h_ : defaultYTHead] := Times @@ (DisplayYT[#, h]& /@ Prod2List[ytExpr]);
+DisplayYT[ytExpr_, h_ : defaultYTHead] /; NumberQ@ytExpr := ytExpr;
 
 ConvertMassiveId2Massless[expr_, np_] := ReplaceBraNumber[expr, Table[np * 2 + 1 - i -> i, {i, np}]];
 

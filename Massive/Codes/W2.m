@@ -1,3 +1,4 @@
+LogPri["W2 Loaded"];
 (* ::Section:: *)
 (* W^2 operator *)
 (*Mostly following massless*)
