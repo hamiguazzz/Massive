@@ -167,11 +167,11 @@ GetColorInnerPermutedOperatorDict[colorIndDict_Association, genCoorsByRule_] :=
         rules = allRules[coloredParticle];
         coors = genCoorsByRule /@ rules;
         If[Length@coors != 1,
-          PFirst = coors[[2]];
-          PAll = coors[[-1]];
+          PFirst = N@coors[[2]];
+          PAll = N@coors[[-1]];
           AssociateTo[operatorDict,
             coloredParticle -> {
-              1 -> IdentityMatrix[Length@coors[[1]]],
+              1 -> N@IdentityMatrix[Length@coors[[1]]],
               symPermuteFirst -> PFirst
             } ~ Join ~
                 If[Length@colorIndDict[coloredParticle] > 2,
@@ -226,7 +226,7 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
   {np, spins, identicalList, physicalBasisIndex,
     bhBasis, permutedBHs, coloredCfBasis, permutedBHCoorsDict, rulePermutedIdenticalCoorsDict,
     rulesPermutedIdentical, lorIdenticalOpDict, permuteIdenticalPolyDict, totalOperator,
-    independentCfBasis, independentPermutedBasis,
+    independentCfBasis, independentPermutedBasis, projectionOp,
     colorIndDict, colorBasis, colorIdenticalOpDict,
     totalIdenticalOpDict},
 
@@ -239,12 +239,14 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
   identicalList = (# ~ Append ~ If[OddQ[2 * spins[[#[[1]]]]], "A", "S"])& /@ identicalParam;
 
   (*Calc Color Permutation*)
-  {colorIndDict, colorBasis, colorIdenticalOpDict} =
+  {colorIndDict, colorBasis, colorIdenticalOpDict, projectionOp} =
       AuxConstructIdenticalColorBasis[su3ShapeList, identicalList,
         OptionValue@ythead, FilterRules[{opts}, Options@AuxConstructIdenticalColorBasis]];
 
   (*Self color cancel*)
   If[Length@colorBasis == 0, Return[{}]];
+
+  If[OptionValue@log, LogPri["involved color basis ", Length@ colorBasis];];
 
   (*Calc Lorentz Permutation*)
   rulesPermutedIdentical = GetMassiveIdenticalRules[#, np]& /@ identicalList // Flatten[#, 1]& // DeleteDuplicates;
@@ -257,16 +259,38 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
 
   (*Calc direct product op*)
   permuteIdenticalPolyDict = GetTotalPermutedPolyDict[identicalList];
-  totalIdenticalOpDict = KeyValueMap[
-    (#1 -> Table[
-      #2[[i]][[1]] ->
-          KroneckerProduct[#2[[i]][[2]], lorIdenticalOpDict[#1][[i]][[2]]],
-      {i, Length@#2}])&
-    , colorIdenticalOpDict] // Association;
-  totalOperator = (KroneckerProduct[IdentityMatrix@Length@colorBasis, cfBasisCoordinates]). (Dot @@
-      Table[permuteIdenticalPolyDict[id] /.
-          totalIdenticalOpDict[id], {id, identicalList}])
-      // AbsoluteTiming // (If[OptionValue@log, LogPri["calc total op matrix cost ", #[[1]]]];#[[2]])& ;
+  If[OptionValue@log, LogPri["dimension of total permutation op is ",
+    Length@colorBasis * {Length@cfBasisCoordinates, Length@cfBasisCoordinates[[1]] }];];
+  (*    totalIdenticalOpDict = KeyValueMap[*)
+  (*      (#1 -> Table[*)
+  (*        #2[[i]][[1]] ->*)
+  (*            KroneckerProduct[#2[[i]][[2]], lorIdenticalOpDict[#1][[i]][[2]]],*)
+  (*        {i, Length@#2}])&*)
+  (*      , colorIdenticalOpDict] // Association;*)
+
+  (*    totalOperator = (KroneckerProduct[IdentityMatrix@Length@colorBasis, cfBasisCoordinates]). (Dot @@*)
+  (*        totalOperator = (Dot @@*)
+  (*        Table[permuteIdenticalPolyDict[id] /.*)
+  (*            totalIdenticalOpDict[id], {id, identicalList}])*)
+  (*        // AbsoluteTiming // (If[OptionValue@log, LogPri["calc total op matrix cost ", #[[1]]]];#[[2]])& ;*)
+
+  (*  totalOperator = KroneckerProduct[*)
+  (*    (Dot @@ Table[permuteIdenticalPolyDict[id] /.*)
+  (*        colorIdenticalOpDict[id], {id, identicalList}]),*)
+  (*    (Dot @@ Table[permuteIdenticalPolyDict[id] /.*)
+  (*        lorIdenticalOpDict[id], {id, identicalList}])]*)
+  (*      // AbsoluteTiming // (If[OptionValue@log, LogPri["calc total op matrix cost ", #[[1]]]];#[[2]])& ;*)
+  colorOp = (Dot @@ Table[permuteIdenticalPolyDict[id] /. colorIdenticalOpDict[id], {id, identicalList}])
+      .projectionOp // AbsoluteTiming // (If[OptionValue@log, LogPri["color matrix",
+    {Length@#[[2]], Length@#[[2]][[1]]}
+    , "calc cost ", #[[1]]]];#[[2]])&;
+  lorentzOp = (cfBasisCoordinates.(Dot @@ Table[permuteIdenticalPolyDict[id] /.
+      lorIdenticalOpDict[id], {id, identicalList}]))
+      // AbsoluteTiming // (If[OptionValue@log, LogPri["Lorentz matrix",
+    {Length@#[[2]], Length@#[[2]][[1]]}
+    , " calc cost ", #[[1]]]];#[[2]])&;
+  totalOperator = KroneckerProduct[colorOp, lorentzOp];
+
   (*Expand basis*)
   coloredCfBasis = Table[{color, amp}, {color, colorBasis}, {amp, independentCfBasis}] // Flatten[#, 1]&;
   physicalBasisIndex = Join @@ Table[physicalBasisIndex * i, {i, Length@colorBasis}];
@@ -275,7 +299,7 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
     independentPermutedBasis = coloredCfBasis[[#]]& /@
         Intersection[physicalBasisIndex,
           Flatten[Position[#, Except[0, _?NumericQ], 1, 1]& /@
-              RowReduce@Transpose@totalOperator]];,
+              RowReduce@Transpose@N@totalOperator]];,
     independentPermutedBasis = coloredCfBasis[[#]]& /@ physicalBasisIndex;
   ] // AbsoluteTiming // (If[OptionValue@log, LogPri["find independent basis cost ", #[[1]]]];)&;
   Return[independentPermutedBasis];
@@ -309,14 +333,14 @@ AuxConstructIdenticalColorBasis[su3ShapeList_, identicalList_, h_, OptionsPatter
     ruleIdenticalCoorsDict[#]&];
   colorInnerOpDict = GetColorInnerPermutedOperatorDict[colorIndDict, ruleInnerCoorsDict[#]&];
   projectionOp = GetProjectInnerColorOp[colorIndDict, colorInnerOpDict];
-  independentIndPosList = Flatten[Position[#, Except[0, _?NumericQ], 1, 1]& /@
-      RowReduce@projectionOp];
-  colorBasis = colorBasis[[independentIndPosList]];
+  (*  independentIndPosList = Flatten[Position[#, Except[0, _?NumericQ], 1, 1]& /@*)
+  (*      RowReduce@projectionOp];*)
+  (*  colorBasis = colorBasis[[independentIndPosList]];*)
 
-  (*Only select independent parts*)
-  colorIdenticalOpDict =
-      ((#[[1]] -> #[[2]][[independentIndPosList, independentIndPosList]])&
-          /@ #)&
-          /@ colorIdenticalOpDict;
-  Return[{colorIndDict, colorBasis, colorIdenticalOpDict}]
+  (*  *)(*Only select independent parts*)
+  (*  colorIdenticalOpDict =*)
+  (*      ((#[[1]] -> #[[2]][[independentIndPosList, independentIndPosList]])&*)
+  (*          /@ #)&*)
+  (*          /@ colorIdenticalOpDict;*)
+  Return[{colorIndDict, colorBasis, colorIdenticalOpDict, projectionOp}]
 ];

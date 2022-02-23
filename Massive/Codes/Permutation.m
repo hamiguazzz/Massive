@@ -268,9 +268,9 @@ GetIndependentPermutedOperatorDict[identicalParticleLists_List, nTotal_Integer, 
         PFirst = Transpose@LinearSolve[Transpose@coors[[1]], Transpose@coors[[2]]];
         PAll = Transpose@LinearSolve[Transpose@coors[[1]], Transpose@coors[[-1]]];
         operatorDict[identicalParticleList] = {
-          1 -> IdentityMatrix[Length@coors[[1]]],
-          symPermuteFirst -> PFirst,
-          symPermuteAll[-1 + Length@identicalParticleList] -> PAll
+          1 -> N@IdentityMatrix[Length@coors[[1]]],
+          symPermuteFirst -> N@PFirst,
+          symPermuteAll[-1 + Length@identicalParticleList] -> N@PAll
         } // DeleteDuplicates;
         , {identicalParticleList, identicalParticleLists}];
       Return[operatorDict];
@@ -298,7 +298,7 @@ GetPermutedPolyFromYT[ytShape_List] := Module[
   {np = Total@ytShape, cycPolys, swapPolys, totalPolys},
   cycPolys = GenerateYoungSymmetrizer /@ GenerateStandardTableaux@ytShape;
   swapPolys = (SimplifySwapRepresentationPoly@SwapRepresentation[#, np]&) /@ cycPolys;
-  totalPolys = (1 / (Length@#) * #)& /@ swapPolys;
+  totalPolys = swapPolys;
   Return[totalPolys];
 ];
 
