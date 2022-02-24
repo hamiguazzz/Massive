@@ -28,6 +28,8 @@ CountHead[head_] :=
         Total)
     ] &;*)
 
+FindIndependentBasisPos[coordinateMatrix_?MatrixQ] := Flatten[FirstPosition[#, Except[0, _?NumericQ], {}]& /@
+    RowReduce@Transpose@coordinateMatrix];
 
 FindCoordinate[vector_, stBasis_?ListQ, coefficientQ_ : NumberQ] := Module[{
   coordinate = ConstantArray[0, Length@stBasis],
