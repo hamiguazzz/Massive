@@ -565,15 +565,14 @@ ConstructOpInSpinIndexSortColorDLC[opList_,np_Integer,yt_,ptclColorIndexs_]:=
             {curPtclInv, -1 / 2, i_} :> {curPtcl, -1 / 2, i, corInd[dummyIndexN]}};
           op=Insert[op,{"\[Epsilon]", corInd[curIndex[[1]]], corInd[curIndex[[2]]], corInd[dummyIndexN++]},Join[Position[op,{curPtcl, ___}],Position[op,{curPtclInv, ___}]]],
           Length[curIndex]==3,
-          0
+          op=op/.{{"F-", curPtcl, i_, j_} :> {"F-", curPtcl, i_, j_, corInd[curIndex[[2]]],corInd[dummyIndexN]},
+            {"F+", curPtclInv, i_, j_} :> {"F+", curPtclInv, i_, j_, corInd[curIndex[[2]]],corInd[dummyIndexN]}};
+          op=Insert[op,{"\[Epsilon]", corInd[curIndex[[1]]], corInd[curIndex[[3]]], corInd[dummyIndexN++]},Join[Position[op,{"F+", curPtclInv, ___}],Position[op,{"F-",curPtcl, ___}]]]
         ]
         ,{i,Length[Keys[ptclColorIndexs]]}];
       op=Join[youngTableaux2StrConst[yt],op];
       Return[op]
     ];
-
-
-
 
 
 SpinorObj2FeynCalField[opListIn_] :=
