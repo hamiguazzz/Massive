@@ -522,15 +522,70 @@ sortSpinorIndex[opListIn_, np_Integer, OptionsPattern[]] :=
       If[OptionValue@factor, AppendTo[outList, fac]];
       Return[outList];
     ];
-Options[ConstructOpInSpinIndexSort] = {mass -> All, factor -> False, traceLabel -> True};
-(*TODO BUG:what should it do if !OptionValue@traceLabel*)
+Options[ConstructOpInSpinIndexSort] = {mass -> All, factor -> False, traceLabel -> True, color -> False, youngTableaux->{}, ptclColorIndexs-><||>};
+(*TODO BUG:what should it do if !OptionValue@traceLabel (pass OptionValue@traceLabel to sortSpinorIndex)*)
 ConstructOpInSpinIndexSort[amp_, np_Integer, opts : OptionsPattern[]] :=
-    If[OptionValue@traceLabel == True,
-      sortSpinorIndex[
-        ConstructOpInSpinIndex[amp, np, Sequence @@ FilterRules[{opts}, Options[ConstructOpInSpinIndex]]],
-        np, Sequence @@ FilterRules[{opts}, Options[sortSpinorIndex]]]];
+    Module[{opList},
+      If[OptionValue@traceLabel == True,
+        opList=sortSpinorIndex[ConstructOpInSpinIndex[amp, np, Sequence @@ FilterRules[{opts}, Options[ConstructOpInSpinIndex]]],
+        np, Sequence @@ FilterRules[{opts}, Options[sortSpinorIndex]]];
+        If[OptionValue@color ==True,
+          Return[ConstructOpInSpinIndexSortColorDLC[opList,np,OptionValue@youngTableaux,OptionValue@ptclColorIndexs]];
+        ];
+    ];
+    Return[opList]
+    ];
 
-(*Example: (ConstructOpInSpinIndexSort[#,5]/.spinorObj2Op)&/@{ConstructAmp[{1,1,1/2,1/2,0},10,antispinor->{0,1,0,1,0}][[8]]}*)
+(*Example: (ConstructOpInSpinIndexSort[#,5])&/@{ConstructAmp[{1,1,1/2,1/2,0},10,antispinor->{0,1,0,1,0}][[8]]}*)
+
+(*this only works for N * 3 Young Tableaux to N structure constants*)
+youngTableaux2StrConst[yt_]:=
+    Module[{corInd,outList},
+    corInd[cor_]:=Symbol["CI" <> ToString[cor]];
+    outList={};
+      Do[
+        AppendTo[outList,{"f",corInd[yt[[1,i]]],corInd[yt[[2,i]]],corInd[yt[[3,i]]]}]
+        ,{i,Length[yt[[1]]]}];
+    Return[outList]
+    ];
+ConstructOpInSpinIndexSortColorDLC[opList_, np_Integer, yt_,
+  ptclColorIndexs_] :=
+    Module[{dummyIndexN, corInd, curPtcl, curPtclInv, curIndex, op},
+      op = opList;
+      dummyIndexN = Evaluate[Max[Flatten[yt]] + 1];
+      corInd[cor_] := Symbol["CI" <> ToString[cor]];
+      Do[curPtcl = Keys[ptclColorIndexs][[i]];
+      curPtclInv = -curPtcl + 2*np + 1;
+      curIndex = ptclColorIndexs[curPtcl];
+      Which[Length[curIndex] == 1,
+        op =
+            op /. {{curPtcl, 1/2, i_} :> {curPtcl, 1/2, i, corInd[curIndex[[1]]]},
+              {curPtclInv, 1/2, i_} :> {-curPtcl + 2*np + 1, 1/2, i, corInd[curIndex[[1]]]},
+              {curPtcl, -1/2,i_} :> {curPtcl, -1/2, i, corInd[curIndex[[1]]]},
+              {curPtclInv, -1/2,i_} :> {-curPtcl + 2*np + 1, -1/2, i,corInd[curIndex[[1]]]}},
+        Length[curIndex] == 2,
+        op =
+            op /. {{curPtcl, -1/2, i_} :> {curPtcl, -1/2, i, corInd[dummyIndexN]},
+              {curPtclInv, -1/2, i_} :> {curPtcl, -1/2, i, corInd[dummyIndexN]},
+              {curPtcl, 1/2, i_} :> {curPtcl, 1/2, i, corInd[dummyIndexN]},
+              {curPtclInv, 1/2, i_} :> {curPtcl, 1/2, i, corInd[dummyIndexN]}};
+        op =
+            Insert[
+              op, {"\[Epsilon]", corInd[curIndex[[1]]], corInd[curIndex[[2]]], corInd[dummyIndexN++]},
+              Join[Position[op, {curPtcl, ___}], Position[op, {curPtclInv, ___}]]], Length[curIndex] == 3,
+        op =
+            op /. {{"F-", curPtcl, i_, j_} :> {"F-", curPtcl, i_, j_, corInd[curIndex[[2]]], corInd[dummyIndexN]},
+              {"F-", curPtclInv, i_, j_} :> {"F-", curPtclInv, i_, j_,corInd[curIndex[[2]]], corInd[dummyIndexN]},
+              {"F+", curPtclInv, i_, j_} :> {"F+", curPtclInv, i_, j_, corInd[curIndex[[2]]], corInd[dummyIndexN]},
+              {"F+", curPtcl, i_, j_} :> {"F+", curPtcl, i_, j_, corInd[curIndex[[2]]], corInd[dummyIndexN]}};
+        op =
+            Insert[
+              op, {"\[Epsilon]", corInd[curIndex[[1]]], corInd[curIndex[[3]]], corInd[dummyIndexN++]},
+              Join[Position[op, {"F+", curPtclInv, ___}], Position[op, {"F-", curPtcl, ___}]]]], {i,
+        Length[Keys[ptclColorIndexs]]}];
+      op = Join[youngTableaux2StrConst[yt], op];
+      Return[op]];
+
 
 SpinorObj2FeynCalField[opListIn_] :=
     Module[
@@ -550,6 +605,7 @@ SpinorObj2FeynCalField[opListIn_] :=
         {"\[Sigma]Bar", L1_, L2_, S1_, S2_} :> 1 / 2 I (GA[L1].GA[L2] - GA[L2].GA[L1]),
         {"F+", n_, i_, j_} :> FieldStrength[i, j, corIndex[corInN]], (*FieldStrength[i,j,c]+LC[i,j,k,l].FieldStrength[k,l,c]*)
         {"F-", n_, i_, j_} :> FieldStrength[i, j, corIndex[corInN]],
+        {"f", i_, j_, k_} :> SUNF[i,j,k],
         {"\[Phi]", i_} :> QuantumField[\[Phi]]}; (*===TODO===Need to change for id ptcl===TODO===*)
       outList = {};
       curObj = opListIn[[1]];
