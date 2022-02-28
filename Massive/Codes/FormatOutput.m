@@ -29,9 +29,13 @@ ExportAmp2Tex[expr_] := ExportAmp2Tex[expr, defaultAbkFun, defaultSbkFun];
 (*Label Section*)
 (*Lorentz Label start with "LI"*)
 Number2Greek = If[#2 > 0, #1 <> ToString[#2], #1] &[Alphabet["Greek"][[Mod[11 + #, 24]]], Quotient[#, 24]] &;
+Number2Latin = If[#2 > 0, #1 <> ToString[#2], #1] &[Alphabet[][[Mod[0 + #, 26]]], Quotient[#, 26]] &;
 (*===TODO===remove letters not used for label ===TODO===*)
 numberLorentzIndex[x_] := StringSplit[x, "LI"] // First // ToExpression;
+numberColorIndex[x_] := StringSplit[x, "CI"] // First // ToExpression;
 Index2Greek[x_] := x // ToString // numberLorentzIndex // Number2Greek // TeXForm // ToString[#]&;
+Index2Latin[x_] := x // ToString // numberColorIndex // Number2Latin  // ToString[#]&;
+
 
 ExportWelyOp2Tex[weylop_Plus] := (ExportSpinorObj2Tex@#)& /@ Sum2List[weylop] // StringRiffle[#, "+"]&;
 ExportWelyOp2Tex[weylop_] := ExportSpinorObj2Tex@weylop;
@@ -49,11 +53,28 @@ ExportSpinorObj2Tex[SpinorOpList_] := Module[{
     {"\[Sigma]Bar", L1_, L2_, S1_, S2_} :> "\\frac{i}{2} (\\gamma^{" <> Index2Greek[L2] <> "} \\gamma^{" <> Index2Greek[L1] <> "} - \\gamma^{" <> Index2Greek[L1] <> "} \\gamma^{" <> Index2Greek[L2] <> "})",
     {"F+", n_, i_, j_} :> "F^+_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
     {"F-", n_, i_, j_} :> "F^-_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
-    {"\[Phi]", i_} :> "\\phi_" <> ToString[i]
+    {"\[Phi]", i_} :> "\\phi_" <> ToString[i],
+    (*with color index*)
+    {n_Integer, 1 / 2, i_, j_} :> "\\psi_" <> ToString[n] <> "^{+" <> Index2Latin[j] <>"}",
+    {n_Integer, -(1 / 2), i_, j_} :> "\\psi_" <> ToString[n] <> "^{-" <> Index2Latin[j] <> "}" ,
+    {n_Integer, 1 / 2 I, i_, j_} :> "\\bar{\\psi}^+_{" <> ToString[n] <> " " <> Index2Latin[j] <> "}",
+    {n_Integer, -(1 / 2) I, i_, j_} :> "\\bar{\\psi}^-_{" <> ToString[n] <> " " <> Index2Latin[j] <> "}" ,
+    {"F+", n_, i_, j_, k_} :> "F_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{+" <> Index2Latin[k] <> "}",
+    {"F-", n_, i_, j_, k_} :> "F_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{-" <> Index2Latin[k] <> "}",
+    {"A", n_, i_, k_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k],
+    {"\[Epsilon]", i_, j_, k_} :> "\\epsilon^{" <> Index2Latin[i] <> " " <> Index2Latin[j] <> " " <> Index2Latin[k] <> "}",
+    {"\[Epsilon]i", i_, j_, k_} :> "\\epsilon_{" <> Index2Latin[i] <> " " <> Index2Latin[j] <> " " <> Index2Latin[k] <> "}",
+    {"TF", i_,j_,k_}:> "\\lambda ^{" <> Index2Latin[i] <> "\\ "<> Index2Latin[k] <> "}_" <> Index2Latin[j],
+    SUNTF[i_, j_, k_] :> "(\\lambda ^{" <> ToString[Index2Latin /@ i] <> "})^{"<> "\\ "<> Index2Latin[k] <> "}_" <> Index2Latin[j]
   };
   outList = {};
   curObj = SpinorOpList[[1]];
   opList = Drop[SpinorOpList, 1];
+  If[(curObj//Head//ToString) != "List", (*only simplefied color term does not have list as head*)
+    AppendTo[outList, "(" <> ((curObj /. dic) // ToString) <> ")"];
+    curObj = opList[[1]];
+    opList = Drop[opList, 1];
+  ]
   While[curObj != {"Tr"},
     AppendTo[outList, curObj /. dic];
     If[Length[opList] == 0, Return[StringJoin[outList]]];
