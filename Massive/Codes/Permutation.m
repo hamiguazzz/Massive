@@ -302,13 +302,42 @@ GetPermutedPolyFromYT[ytShape_List] := Module[
   Return[totalPolys];
 ];
 
-ReplaceBraNumber[expr_Power, rules_] :=
-    Times @@ (ReplaceBraNumber[rules] /@ Prod2List[expr]);
-ReplaceBraNumber[expr_Plus, rules_] :=
-    Total@(ReplaceBraNumber[rules] /@ Sum2List[expr]);
-ReplaceBraNumber[expr_Times, rules_] :=
-    Times @@ (ReplaceBraNumber[rules] /@ Prod2List[expr]);
-ReplaceBraNumber[rules_] := ReplaceBraNumber[#, rules] &;
-ReplaceBraNumber[expr_List, rules_] := ReplaceBraNumber[rules] /@ expr;
-ReplaceBraNumber[expr_, rules_] /; NumberQ[expr] := expr;
-ReplaceBraNumber[expr_, rules_] := expr /. rules;
+ReplaceBraNumber[sb[l___], rules_] := sb @@ (List@l /. rules);
+ReplaceBraNumber[ab[l___], rules_] := ab @@ (List@l /. rules);
+ReplaceBraNumber[expr_, rules_] :=
+    expr /. {ab[l___] :> ReplaceBraNumber[ab[l], rules],
+      sb[l___] :> ReplaceBraNumber[sb[l], rules]};
+
+
+Options@ConstructIndependentBasis = {log -> False} ~ Join ~ Options@ConstructBasis // DeleteDuplicates;
+ConstructIndependentBasis[spins_List, operDim_Integer, identical_ : {}, opts : OptionsPattern[]] :=
+    ConstructIndependentBasis[ConstructBasis[spins, operDim, FilterRules[{opts}, Options@ConstructBasis]], identical,
+      opts];
+ConstructIndependentBasis[result : {cfBasisCoordinates_List, data_Association}, identical_ : {}, OptionsPattern[]] :=
+    Module[
+      {np, spins, identicalList, physicalBasisIndex, dict,
+        bh, permutedBHs, permutedBHCoorsDict, ruleCoorsDict,
+        rules, operatorDict, exprDict, totalOperator, independentCfBasis, totalCoordinates, independentPermutedBasis},
+      spins = data["metaInfo"]["spins"];
+      np = Length@spins;
+      independentCfBasis = data["basis"];
+      physicalBasisIndex = PositionOperatorPhysicalDim[data];
+      If[Flatten@identical === {}, Return[independentCfBasis[[#]]& /@ physicalBasisIndex]];
+      bh = data["bh"] // Values // Flatten;
+      identicalList = (# ~ Append ~ If[OddQ[2 * spins[[#[[1]]]]], "A", "S"])& /@ identical;
+      rules = GetMassiveIdenticalRules[#, np]& /@ identicalList // Flatten[#, 1]& // DeleteDuplicates;
+      dict = data["reduceDict"];
+      permutedBHs = ParallelTable[ReplaceBraNumber[rule][b], {b, bh}, {rule, rules}] // Flatten;
+      permutedBHCoorsDict = ReduceToBH[permutedBHs, bh, np]
+          // AbsoluteTiming // (LogPri["identical reduce cost ", #[[1]]];#[[2]])&;
+      ruleCoorsDict = Table[rule -> (permutedBHCoorsDict[#]&) /@ ReplaceBraNumber[rule] /@ bh, {rule, rules}]
+          // Association;
+      operatorDict = GetIndependentPermutedOperatorDict[identicalList, np, ruleCoorsDict[#]&];
+      exprDict = GetTotalPermutedPolyDict[identicalList];
+      totalOperator = Dot @@ Table[exprDict[id] /. operatorDict[id], {id, identicalList}];
+      totalCoordinates = cfBasisCoordinates.totalOperator;
+      independentPermutedBasis = independentCfBasis[[#]]& /@
+          Intersection[physicalBasisIndex,
+            FindIndependentBasisPos[totalCoordinates]];
+      Return[independentPermutedBasis];
+    ];

@@ -12,6 +12,7 @@ MassOption[massiveParticles_List, np_] /; IntegerQ[massiveParticles[[1]]] := Tab
   {i, np}];
 MassOption[All, np_] := Table["\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)", {i, np}];
 
+(*TODO change massless dealing*)
 Options[ConstructAmp] = {
   antispinor -> None,
   fund -> "\[Lambda]t",
@@ -329,6 +330,7 @@ ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]]
       Return[coorDict];
     ];
 
+(*TODO change massless dealing*)
 Options[ConstructBasis] = {
   explicitmass -> False, fund -> "\[Lambda]t", mass -> All,
   withDict -> True, kernelAmount -> "Auto", log -> False,

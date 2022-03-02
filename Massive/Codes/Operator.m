@@ -13,6 +13,7 @@ Amp2BrasList[amp_] :=
 BreakBracket[bra_] := {bra[[0]], bra[[1]], bra[[2]]};
 (*Free sb = spin*2-antispinor*)
 (*Free ab = antispinor*)
+(*TODO change massless dealing*)
 Options[Amp2MetaInfo] = {mass -> All};
 Amp2MetaInfo[amp_, np_Integer, OptionsPattern[]] := Module[
   {masses, rule, braList , fun, particleList, massiveParticleList, spins, antispinors},
@@ -54,7 +55,7 @@ FindPsiChain[amp_, np_Integer, OptionsPattern[]] := Module[
   {spins, antispinors} = Amp2MetaInfo[amp, np, mass -> OptionValue@mass];
   bras = BreakBracket /@ bras;
   If[Length@bras < 2,
-    Return[{factor, bras, {1}}]
+    Return[{factor, Append[bras[[1]], bras[[1]][[1]]], {1}}];
   ];
   FactorMatchQ[bra_, matchrule_] :=
       If[ MatchQ[bra, matchrule],
@@ -691,8 +692,11 @@ SpinorObj2FeynCalField[opListIn_] :=
            {ConstructAmp[{1, 1, 1/2, 1/2, 0}, 10, antispinor -> {0, 1, 0, 1, 0}][[8]]})[[1]]
            // SpinorObj2FeynCalField)) // TraditionalForm*)
 
-Options[Amp2WeylOp] = {mass -> All, factor -> False, traceLabel -> True};
+Options[Amp2WeylOp] = Options[ConstructOpInSpinIndexSort];
 Amp2WeylOp[amp_, np_Integer, opts : OptionsPattern[]] :=
     (ConstructOpInSpinIndexSort[amp, np, Sequence @@ FilterRules[{opts}, Options@ConstructOpInSpinIndexSort]]);
 Amp2WeylOp[amps_Plus, np_Integer, opts : OptionsPattern[]] := Amp2WeylOp[np, opts] /@ Sum2List[amps] // Total;
 Amp2WeylOp[np_Integer, opts : OptionsPattern[]] := Amp2WeylOp[#, np, opts]&;
+Amp2WeylOp[amp_List, np_Integer, opts : OptionsPattern[]] :=
+    (ConstructOpInSpinIndexSort[amp[[2]], np, youngTableaux -> amp[[1]], color -> True
+      , FilterRules[{opts}, Options@ConstructOpInSpinIndexSort]]);
