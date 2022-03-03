@@ -48,7 +48,7 @@ ExportSpinorObj2Tex[SpinorOpList_] := Module[{
     {"D", n_, i_} :> "D_{" <> Index2Greek[i] <> "}",
     {"A", n_, i_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}",
     {"\[Sigma]", LI_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[LI] <> "}",
-    {"\[Sigma]Bar", LI_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[LI] <> "}",
+    {"\[Sigma]Bar", LI_, S1_, S2_} :> "\bar{\\sigma}^{" <> Index2Greek[LI] <> "}",
     {"\[Sigma]", L1_, L2_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[L1] <> " " <> Index2Greek[L2] <> "}",
     {"\[Sigma]Bar", L1_, L2_, S1_, S2_} :> "\\bar{\\sigma}^{" <> Index2Greek[L1] <> " " <> Index2Greek[L2] <> "}",
 (*    {"\[Sigma]", L1_, L2_, S1_, S2_} :> "\\frac{i}{2} (\\gamma^{" <> Index2Greek[L1] <> "} \\gamma^{" <> Index2Greek[L2] <> "} - \\gamma^{" <> Index2Greek[L2] <> "} \\gamma^{" <> Index2Greek[L1] <> "})",*)
