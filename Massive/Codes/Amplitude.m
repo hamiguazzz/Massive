@@ -394,8 +394,7 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
       ];
       bhDimList = GetNeededBHBasisDimList[cfIndexList];
       ZRank[matrix_] := If[matrix === {}, 0, MatrixRank@matrix];
-      constructOpts = Association@ FilterRules[{opts}, Options[ConstructAmp]];
-      constructOpts = Normal@AssociateTo[constructOpts, mass -> masses];
+      constructOpts = FilterRules[{opts}, Options[ConstructAmp]];
 
       If[OptionValue@log,
         LogPri["Involved BH basis : ", bhDimList];

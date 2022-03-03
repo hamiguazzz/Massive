@@ -44,7 +44,7 @@ ExportWelyOp2Tex[weylop_] := ExportSpinorObj2Tex@weylop;
 (*Example external-><|1->{"W^+","W^+"},2->{"W^-","W^-"},3->{"g","G"},4->{"A","F"},5->{"\\nu_e"},6->{"e"}|>*)
 Options[ExportSpinorObj2Tex] := {external -> "Default"};
 ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
-  innerRules, externalRules,
+  innerRules, externalRules, FieldTranslationRule,
   opList, dic, curObj, outList, trList
 },
   innerRules = {
@@ -82,12 +82,20 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
         {"F-", number, i_, j_} :> "{" <> strength <> "}" <> "_{L"
             <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
         (*with color index*)
+        (*adjoint*)
         {"F+", number, i_, j_, k_} :> "{" <> strength <> "}" <> "_{R"
             <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{" <> Index2Latin[k] <> "}",
         {"F-", number, i_, j_, k_} :> "{" <> strength <> "}" <> "_{L"
             <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{" <> Index2Latin[k] <> "}",
         {"A", number, i_, k_} :> "{" <> field <> "}" <>
-            "_{" <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k]
+            "_{" <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k] <> "}",
+        (*contracted generator*)
+        {"F+", number, i_, j_, k_, l_} :> "{" <> strength <> "}" <> "_{R"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}",
+        {"F-", number, i_, j_, k_, l_} :> "{" <> strength <> "}" <> "_{L"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}",
+        {"A", number, i_, k_, l_} :> "{" <> field <> "}" <>
+            "_{" <> " " <> Index2Greek[i] <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}"
       };
 
   If[OptionValue@external === "Default",
