@@ -12,17 +12,21 @@ MassOption[massiveParticles_List, np_] /; IntegerQ[massiveParticles[[1]]] := Tab
   {i, np}];
 MassOption[All, np_] := Table["\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)", {i, np}];
 
+(*TODO change massless dealing*)
 Options[ConstructAmp] = {
   antispinor -> None,
   fund -> "\[Lambda]t",
   mass -> All};
-ConstructAmp[spins_, ampDim_, OptionsPattern[]] :=
+ConstructAmp[spins_, codeDim_, OptionsPattern[]] :=
     Module[ {np = Length@spins, antispinors, para, yd, filling, amps, masses},
       If[np < 4, Return[Null]];
       masses = MassOption[OptionValue@mass, np];
       antispinors = If[OptionValue@antispinor === None, ConstantArray[0, np], OptionValue@antispinor];
-      If[!CheckAmpConstruction[spins, ampDim, antispinors, masses], Return[{}]];
-      para = InnerConstructAmp[spins, antispinors, np, ampDim, masses];
+      If[np > Length@antispinors,
+        antispinors = antispinors ~ Join ~ ConstantArray[0, np - Length@antispinors];
+      ];
+      If[!CheckAmpConstruction[spins, codeDim - np, antispinors, masses], Return[{}]];
+      para = InnerConstructAmp[spins, antispinors, np, codeDim, masses];
       If[ Length@Select[para, Negative[#]&] != 0,
         Return[{}]
       ];
@@ -35,16 +39,21 @@ ConstructAmp[spins_, ampDim_, OptionsPattern[]] :=
       Return[amps];
     ];
 
-CheckAmpConstruction[spins_, ampDim_, antispinors_, masses_] := Module[{np, minDim},
+CheckAmpConstruction[spins_, ampDim_, antispinors_, masses_] := Module[{np, minAmpDim},
   np = Length@spins;
   If[np < 3 || np != Length@antispinors || np != Length@masses, Return[False]];
-  minDim = np + Total@spins;
-  If[ampDim < minDim || OddQ[ampDim + Total@antispinors - minDim], Return[False]];
-  If[0 =!= MapThread[If[#3 == 0, #2 =!= #1 && #2 =!= 0, #2 > #1 || #2 < 0]& , {2 * spins, antispinors, masses}] /. {True
-      -> 1,
-    False -> 0} // Total,
+  minAmpDim = Plus @@ Abs@spins;
+  If[0 =!= Plus @@ MapThread[
+    If[#3 === 0,
+      If[#2 =!= 0, 1, 0],
+      If[#2 > #1 || #2 < 0, 1, 0]
+    ]&,
+    {2 * spins, antispinors, masses}],
     Return[False];
   ];
+  If[ampDim < minAmpDim || OddQ[ampDim + Plus @@ MapThread[
+    If[#3 === 0, If[#1 > 0, 0, -2 * #1], #2]&,
+    {spins, antispinors, masses}] - minAmpDim], Return[False]];
   Return[True];
 ];
 
@@ -56,8 +65,7 @@ InnerConstructAmp[spins_, antispinors_, np_, ampDim_, masses_] :=
           Table[
             If[ masses[[i]] =!= 0,
               Left - antispinors[[i]],
-              Left + 2 * spins[[i]] - 2 * antispinors[[i]]
-            ],
+              Left + 2 spins[[i]]],
             {i, np}] ~ Join ~
           Table[
             If[  masses[[i]] =!= 0,
@@ -329,6 +337,7 @@ ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]]
       Return[coorDict];
     ];
 
+(*TODO change massless dealing*)
 Options[ConstructBasis] = {
   explicitmass -> False, fund -> "\[Lambda]t", mass -> All,
   withDict -> True, kernelAmount -> "Auto", log -> False,
@@ -339,7 +348,7 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
       {
         metaInfo, masses = MassOption[OptionValue@mass, Length@spins],
         antiList, dimCodeMinimal, np = Length@spins,
-        CalcOperatorDimContribute, nAMax, dimCFFrom, dimCFTo,
+        dimBHMin, nAMax, dimCFFrom, dimCFTo,
         GetNeededBHBasisDimList,
         NeededCFBasisQ,
         sortedBasis, sortedCFCoordinates,
@@ -352,61 +361,42 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
         ZRank
       },
       (*Construct amplitude index*)
-      CalcOperatorDimContribute[spin_] := Switch[spin, 0, 1, 1 / 2, 3 / 2, 1, 2,
-        _, Throw[{spin, "No such spin"}]];
-      nAMax = Count[spins, 1];
-      dimCodeMinimal = Total[CalcOperatorDimContribute /@ spins];
+      nAMax = Total@MapThread[If[#2 =!= 0, If[#1 == 1, 1, 0], 0]&, {spins, masses}];
+      dimCodeMinimal = np + Plus @@ Abs@spins;
       (*minimal operator dimension *)
       (*d_o = d_c - nA*)
       (*l -> 0,...,spin*2*)
       (*massive CF[d_c,sumL]->BH[d_c+sumL] & .. &BH[dimMin] *)
       (*MLL CF[d_c,sumL]->BH[dim+sumL]*)
       If[operDim < dimCodeMinimal - nAMax, Throw[{operDim, "Below minimal operator dimension!"}]];
-      dimCFFrom = Max[dimCodeMinimal, operDim - 2 * Total[spins]];
+      dimCFFrom = Max[dimCodeMinimal, operDim - Plus@MapThread[If[#2 =!= 0, 2 * #1, 0]&, {spins, masses}]];
       dimCFTo = operDim + nAMax;
-      GetNeededBHBasisDimList[indexListInner_] :=
-          PositionIndex@((#[[1]] + Total@#[[2]])& /@
-              Cases[indexListInner, {dim_ /; (dim >= operDim && dim <= dimCFTo), _}]) // Keys;
-      NeededCFBasisQ[dim_, antiSpinors_, includeLowerDim_ : False] :=
-          (*check dim-nA===operDim*)
-          If[includeLowerDim,
-            ((dim -
-                (ReleaseHold[HoldForm[#1 * #2] /. i_ /; i != 1 -> 0] // Total)&
-            [spins, antiSpinors]) <= operDim) &&
-                (*check (dim+sumS-dimMin)Even*)
-                EvenQ[dim + Total[antiSpinors] - dimCodeMinimal],
-            ((dim -
-                (ReleaseHold[HoldForm[#1 * #2] /. i_ /; i != 1 -> 0] // Total)&
-            [spins, antiSpinors]) == operDim) &&
-                (*check (dim+sumS-dimMin)Even*)
-                EvenQ[dim + Total[antiSpinors] - dimCodeMinimal]
-          ]
-      ;
+      GetNeededBHBasisDimList[indexListInner_] := (#[[1]] + Plus @@ #[[2]])& /@ indexListInner // DeleteDuplicates;
+      NeededCFBasisQ[codeDim_, antiSpinors_, includeLowerDim_ : False] :=
+          Module[{thisOpDim},
+            If[!CheckAmpConstruction[spins, codeDim - np, antiSpinors, masses], Return[False];];
+            thisOpDim = codeDim - Plus @@ MapThread[If[#2 === 1 && #1 === 1, 1, 0]& , {spins, antiSpinors}];
+            If[includeLowerDim,
+              Return[thisOpDim <= operDim];,
+              Return[thisOpDim == operDim];
+            ];
+          ];
       antiList = Fold[
-        (Do[Do[Sow[l ~ Append ~ i], {i, 0, #2}], {l, #1}] // Reap // Last // First )&,
-        {{}}, 2 * spins
-      ] // GroupBy[#, Total]&;
+        (Flatten[#, 1]&@
+            Table[l ~ Append ~ i, {l, #1}, {i, 0,
+              If[masses[[#2]] === 0, 0, 2 * spins[[#2]]]}]
+        )&, {{}}, Range[Length@spins]];
 
-      cfIndexList =
-          Reap[Table[
-            If[NeededCFBasisQ[dim, antiList[antiSum][[index]], True] ,
-              Sow[{dim, antiList[antiSum][[index]]}]],
-            {dim, dimCFFrom, dimCFTo}, {antiSum, 0, 2 * Total[spins]},
-            {index, Length[antiList[antiSum]]}]] // Last;
-
+      cfIndexList = Select[(NeededCFBasisQ[#[[1]], #[[2]], True])&]@
+          Flatten[#, 1]&@Table[{d, l}, {d, dimCFFrom, dimCFTo}, {l, antiList}];
       If[Length[cfIndexList] == 0,
         Throw["No such operator!"];
-        ,
-        cfIndexList = cfIndexList[[1]];
       ];
       bhDimList = GetNeededBHBasisDimList[cfIndexList];
       ZRank[matrix_] := If[matrix === {}, 0, MatrixRank@matrix];
       constructOpts = Association@ FilterRules[{opts}, Options[ConstructAmp]];
       constructOpts = Normal@AssociateTo[constructOpts, mass -> masses];
 
-      cfIndexList = Cases[cfIndexList, {dim_, antiSpinors_} /;
-          (MemberQ[bhDimList, dim + Total@antiSpinors])
-      ];
       If[OptionValue@log,
         LogPri["Involved BH basis : ", bhDimList];
         LogPri["Involved CF basis : ", cfIndexList];];
@@ -465,13 +455,9 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
       sortedCFCoordinates = cfCoordinateDict[#]& /@ sortedBasis;
 
       (*Get independent basis*)
-      ((sortedBasis = sortedBasis[[#]]; sortedCFCoordinates = sortedCFCoordinates[[#]])&@
-          Flatten[Position[#, Except[0, _?NumericQ], 1, 1] & /@
-              RowReduce@Transpose@
-                  ReplaceAll[sortedCFCoordinates, Table[If[e =!= 0, e -> 1], {e, masses}]]
-          ]) // AbsoluteTiming //
+      (sortedBasis = sortedBasis[[#]]; sortedCFCoordinates = sortedCFCoordinates[[#]])&@
+          FindIndependentBasisPos[sortedCFCoordinates] // AbsoluteTiming //
           If[OptionValue@log, LogPri["Ranking costs ", #[[1]]]]&;
-      (*TODO reduce identical particles*)
       (*Select from minimal dimension*)
       (*This should not be done now.  Otherwise the permutation operator matrix will be wrong*)
       (*      index = Flatten@Position[permutedBasis,*)
@@ -498,5 +484,6 @@ PositionOperatorPhysicalDim[constructBasisData_Association] := Module[
   basis = constructBasisData["basis"];
   reverseBasisDict = ReverseDict@cfBasisDict;
   index = (NeededCFBasisQ[#[[1]], #[[2]], False]&@reverseBasisDict[#]&@#)& /@ basis // PositionIndex;
+  If[!KeyExistsQ[index, True], Return[{}]];
   Return[index[True]];
 ];
