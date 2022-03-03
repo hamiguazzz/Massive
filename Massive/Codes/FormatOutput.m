@@ -112,7 +112,6 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
     },
     externalRules = Join[FieldTranslationRule /@ Normal@OptionValue@external];
   ];
-  Print[externalRules];
   dic = Join[innerRules, externalRules];
   outList = {};
   curObj = SpinorOpList[[1]];
