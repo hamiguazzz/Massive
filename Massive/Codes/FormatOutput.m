@@ -50,7 +50,7 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
   innerRules = {
     {"D", n_, i_} :> "D_{" <> Index2Greek[i] <> "}",
     {"\[Sigma]", LI_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[LI] <> "}",
-    {"\[Sigma]Bar", LI_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[LI] <> "}",
+    {"\[Sigma]Bar", LI_, S1_, S2_} :> "\\bar{\\sigma}^{" <> Index2Greek[LI] <> "}",
     {"\[Sigma]", L1_, L2_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[L1] <> " " <> Index2Greek[L2] <> "}",
     {"\[Sigma]Bar", L1_, L2_, S1_, S2_} :> "\\bar{\\sigma}^{" <> Index2Greek[L1] <> " " <> Index2Greek[L2] <> "}",
     {"\[Epsilon]", i_, j_, k_} :> "\\epsilon^{" <> Index2Latin[i] <> " " <> Index2Latin[j] <> " " <> Index2Latin[k] <> "}",
@@ -65,8 +65,8 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
   FieldTranslationRule[number_Integer -> {name_String}] :=
       {
         {"\[Phi]", number} :> name,
-        {number, 1 / 2, i_} :> "{" <> name <> "}_{R}";
-        {number, -(1 / 2), i_} :> "{" <> name <> "}_{L}";
+        {number, 1 / 2, i_} :> "{" <> name <> "}_{R}",
+        {number, -(1 / 2), i_} :> "{" <> name <> "}_{L}",
         (*with color index*)
         {number, 1 / 2, i_, j_} :> "{" <> name <> "}_{R}^{" <> Index2Latin[j] <> "}",
         {number, -(1 / 2), i_, j_} :> "{" <> name <> "}_{L}^{" <> Index2Latin[j] <> "}" ,
@@ -110,7 +110,7 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
           Index2Latin[k] <> "}",
       {"A", n_, i_, k_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k]
     },
-    externalRules = Join[FieldTranslationRule /@ Normal@OptionValue@external];
+    externalRules = Join @@ (FieldTranslationRule /@ Normal@OptionValue@external);
   ];
   dic = Join[innerRules, externalRules];
   outList = {};
