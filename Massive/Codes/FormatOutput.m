@@ -41,31 +41,18 @@ Index2Latin[x_] := x // ToString // numberColorIndex // Number2Latin // ToString
 (*TODO Delete field number index*)
 ExportWelyOp2Tex[weylop_Plus] := (ExportSpinorObj2Tex@#)& /@ Sum2List[weylop] // StringRiffle[#, "+"]&;
 ExportWelyOp2Tex[weylop_] := ExportSpinorObj2Tex@weylop;
-ExportSpinorObj2Tex[SpinorOpList_] := Module[{
+(*Example external-><|1->{"W^+","W^+"},2->{"W^-","W^-"},3->{"g","G"},4->{"A","F"},5->{"\\nu_e"},6->{"e"}|>*)
+Options[ExportSpinorObj2Tex] := {external -> "Default"};
+ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
+  innerRules, externalRules,
   opList, dic, curObj, outList, trList
 },
-  dic = {
-    {n_Integer, 1 / 2, i_} :> "\\psi^R_" <> ToString[n],
-    {n_Integer, -(1 / 2), i_} :> "\\psi^L_" <> ToString[n],
+  innerRules = {
     {"D", n_, i_} :> "D_{" <> Index2Greek[i] <> "}",
-    {"A", n_, i_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}",
     {"\[Sigma]", LI_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[LI] <> "}",
     {"\[Sigma]Bar", LI_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[LI] <> "}",
     {"\[Sigma]", L1_, L2_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[L1] <> " " <> Index2Greek[L2] <> "}",
     {"\[Sigma]Bar", L1_, L2_, S1_, S2_} :> "\\bar{\\sigma}^{" <> Index2Greek[L1] <> " " <> Index2Greek[L2] <> "}",
-    (*    {"\[Sigma]", L1_, L2_, S1_, S2_} :> "\\frac{i}{2} (\\gamma^{" <> Index2Greek[L1] <> "} \\gamma^{" <> Index2Greek[L2] <> "} - \\gamma^{" <> Index2Greek[L2] <> "} \\gamma^{" <> Index2Greek[L1] <> "})",*)
-    (*    {"\[Sigma]Bar", L1_, L2_, S1_, S2_} :> "\\frac{i}{2} (\\gamma^{" <> Index2Greek[L2] <> "} \\gamma^{" <> Index2Greek[L1] <> "} - \\gamma^{" <> Index2Greek[L1] <> "} \\gamma^{" <> Index2Greek[L2] <> "})",*)
-    {"F+", n_, i_, j_} :> "F^+_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
-    {"F-", n_, i_, j_} :> "F^-_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
-    {"\[Phi]", i_} :> "\\phi_" <> ToString[i],
-    (*with color index*)
-    {n_Integer, 1 / 2, i_, j_} :> "\\psi_" <> ToString[n] <> "^{R" <> Index2Latin[j] <> "}",
-    {n_Integer, -(1 / 2), i_, j_} :> "\\psi_" <> ToString[n] <> "^{L" <> Index2Latin[j] <> "}" ,
-    {n_Integer, 1 / 2 I, i_, j_} :> "\\bar{\\psi}^R_{" <> ToString[n] <> " " <> Index2Latin[j] <> "}",
-    {n_Integer, -(1 / 2) I, i_, j_} :> "\\bar{\\psi}^L_{" <> ToString[n] <> " " <> Index2Latin[j] <> "}" ,
-    {"F+", n_, i_, j_, k_} :> "F_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{+" <> Index2Latin[k] <> "}",
-    {"F-", n_, i_, j_, k_} :> "F_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{-" <> Index2Latin[k] <> "}",
-    {"A", n_, i_, k_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k],
     {"\[Epsilon]", i_, j_, k_} :> "\\epsilon^{" <> Index2Latin[i] <> " " <> Index2Latin[j] <> " " <> Index2Latin[k] <> "}",
     {"\[Epsilon]i", i_, j_, k_} :> "\\epsilon_{" <> Index2Latin[i] <> " " <> Index2Latin[j] <> " " <> Index2Latin[k] <> "}",
     {"TF", i_, j_, k_} :> "\\lambda ^{" <> Index2Latin[i] <> "\\ " <> Index2Latin[k] <> "}_" <> Index2Latin[j],
@@ -74,6 +61,59 @@ ExportSpinorObj2Tex[SpinorOpList_] := Module[{
     SUND[i_, j_, k_] :> "d_{" <> Index2Latin[i] <> " " <> Index2Latin[j] <> " " <> Index2Latin[k] <> "}",
     SUNF[i_, j_, k_] :> "f_{" <> Index2Latin[i] <> " " <> Index2Latin[j] <> " " <> Index2Latin[k] <> "}"
   };
+
+  FieldTranslationRule[number_Integer -> {name_String}] :=
+      {
+        {"\[Phi]", number} :> name,
+        {number, 1 / 2, i_} :> "{" <> name <> "}_{R}";
+        {number, -(1 / 2), i_} :> "{" <> name <> "}_{L}";
+        (*with color index*)
+        {number, 1 / 2, i_, j_} :> "{" <> name <> "}_{R}^{" <> Index2Latin[j] <> "}",
+        {number, -(1 / 2), i_, j_} :> "{" <> name <> "}_{L}^{" <> Index2Latin[j] <> "}" ,
+        {number, 1 / 2 I, i_, j_} :> "{" <> name <> "}_{R" <> " " <> Index2Latin[j] <> "}",
+        {number, -(1 / 2) I, i_, j_} :> "{" <> name <> "}_{L" <> " " <> Index2Latin[j] <> "}"
+      };
+
+  FieldTranslationRule[number_Integer -> {field_String, strength_String}] :=
+      {
+        {"A", number, i_} :> "{" <> field <> "}" <> "_{" <> " " <> Index2Greek[i] <> "}",
+        {"F+", number, i_, j_} :> "{" <> strength <> "}" <> "_{R"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
+        {"F-", number, i_, j_} :> "{" <> strength <> "}" <> "_{L"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
+        (*with color index*)
+        {"F+", number, i_, j_, k_} :> "{" <> strength <> "}" <> "_{R"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{" <> Index2Latin[k] <> "}",
+        {"F-", number, i_, j_, k_} :> "{" <> strength <> "}" <> "_{L"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{" <> Index2Latin[k] <> "}",
+        {"A", number, i_, k_} :> "{" <> field <> "}" <>
+            "_{" <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k]
+      };
+
+  If[OptionValue@external === "Default",
+    externalRules = {
+      {"\[Phi]", i_} :> "\\phi_" <> ToString[i],
+      {n_Integer, 1 / 2, i_} :> "\\psi^R_" <> ToString[n],
+      {n_Integer, -(1 / 2), i_} :> "\\psi^L_" <> ToString[n],
+      {"A", n_, i_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}",
+      {"F+", n_, i_, j_} :> "{F_R}_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
+      {"F-", n_, i_, j_} :> "{F_L}_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
+      (*with color index*)
+      {n_Integer, 1 / 2, i_, j_} :> "{\\psi_R}_" <> ToString[n] <> "^{" <> Index2Latin[j] <> "}",
+      {n_Integer, -(1 / 2), i_, j_} :> "{\\psi_L}" <> ToString[n] <> "^{" <> Index2Latin[j] <> "}" ,
+      {n_Integer, 1 / 2 I, i_, j_} :> "\\bar{\\psi}_{R" <> ToString[n] <> " " <> Index2Latin[j] <> "}",
+      {n_Integer, -(1 / 2) I, i_, j_} :> "\\bar{\\psi}_{L" <> ToString[n] <> " " <> Index2Latin[j] <> "}" ,
+
+      {"F+", n_, i_, j_, k_} :> "F_{R" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{+" <>
+          Index2Latin[k] <> "}",
+      {"F-", n_, i_, j_, k_} :> "F_{L" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{-" <>
+          Index2Latin[k] <> "}",
+      {"A", n_, i_, k_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k]
+    },
+    externalRules = Join[FieldTranslationRule /@ Normal@OptionValue@external];
+  ];
+  Print[externalRules];
+  dic = Join[innerRules, externalRules];
   outList = {};
   curObj = SpinorOpList[[1]];
   opList = Drop[SpinorOpList, 1];

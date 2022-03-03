@@ -24,11 +24,7 @@ Amp2MetaInfo[amp_, np_Integer, OptionsPattern[]] := Module[
   massiveParticleList = Table[Count[braList, rule[sb, i]], {i, Range[2 * np, np + 1, -1]}];
   fun[particleList : {nSb_, nAb_}, nMassive_, thisMass_] :=
       If[thisMass === 0,
-        If[nAb > nSb,
-          (nAb - nSb) * {1 / 2, 1},
-          {(nSb - nAb) / 2, 0}
-        ]
-        ,
+        {(nSb - nAb) / 2, 0},
         {(nMassive + nAb - nSb) / 2, nAb - nSb}
       ];
   {spins, antispinors} = Transpose@MapThread[fun, {particleList, massiveParticleList, masses}];
@@ -71,7 +67,7 @@ FindPsiChain[amp_, np_Integer, OptionsPattern[]] := Module[
   (*{sbs,abs}*)
   GenLeftExternalNumber[index_] :=
       If[masses[[index]] === 0,
-        If[antispinors[[index]] === 0,
+        If[spins[[index]] > 0,
           {ConstantArray[index, spins[[index]] * 2], {}}
           ,
           {{}, ConstantArray[index, spins[[index]] * 2]}
@@ -209,7 +205,7 @@ ConstructOpInSpinIndex[amp_, np_Integer, spins_List, OptionsPattern[]] :=
 
     Module[
       {
-        flattenNp,psiChain, chains, spInN, spinorIndex, SpinorObj, obj, index, findPtclSpin, opList, chain,
+        flattenNp, psiChain, chains, spInN, spinorIndex, SpinorObj, obj, index, findPtclSpin, opList, chain,
         DerPObj, DerMObj, FPObj, FMObj, APObj, AMObj, fPos, lorInN, lorIndex, lorIndexP,
         loopi, firstSpinorIndexN, firstSpinorObj, signFlipflop, testA,
         testAbSb
@@ -237,7 +233,7 @@ ConstructOpInSpinIndex[amp_, np_Integer, spins_List, OptionsPattern[]] :=
       FMObj[obj_, indexL_, indexR_] := {"F-", obj, indexL, indexR};(*F-*)
       APObj[obj_, indexL_, indexR_] := {"A+", obj, indexL, indexR};
       AMObj[obj_, indexL_, indexR_] := {"A-", obj, indexL, indexR};(*A+ for >[ and A- for ]<*)
-      flattenNp[n_]:=If[n>np,- n +2*np +1,n];
+      flattenNp[n_] := If[n > np, - n + 2 * np + 1, n];
       (*make op List with D and spinorObj*)
       opList = {};
       Do[chain = chains[[i]];
@@ -304,14 +300,14 @@ ConstructOpInSpinIndex[amp_, np_Integer, spins_List, OptionsPattern[]] :=
           If[Part[opList, fPos[[1]][[1]]][[2]] == Part[opList, fPos[[2]][[1]]][[2]],
             opList = Join[opList,
               {If[spins[[i]] == 1, FPObj, FMObj]
-              [i//flattenNp, Part[opList, fPos[[1]][[1]]] // index, Part[opList, fPos[[2]][[1]]] // index]}];
+              [i // flattenNp, Part[opList, fPos[[1]][[1]]] // index, Part[opList, fPos[[2]][[1]]] // index]}];
             opList = Delete[opList, fPos]
             ,
             opList = Join[opList,
               {If[(Part[opList, fPos[[1]][[1]]][[-1]] == 1 && Part[opList, fPos[[1]][[1]]][[2]] == 1)
                   || (Part[opList, fPos[[1]][[1]]][[-1]] == -1 && Part[opList, fPos[[1]][[1]]][[2]] == 0),
                 AMObj, APObj]
-              [i//flattenNp, Part[opList, fPos[[1]][[1]]] // index, Part[opList, fPos[[2]][[1]]] // index]}];
+              [i // flattenNp, Part[opList, fPos[[1]][[1]]] // index, Part[opList, fPos[[2]][[1]]] // index]}];
             opList = Delete[opList, fPos]
 
           ]]
@@ -374,16 +370,16 @@ spinorObjOpDisplayForm[x_] := Module[{dic},
     {"F-", n_, i_, j_} :> Subscript[Subscript[SuperMinus["F"], n], {i, j}],
     {"\[Phi]", i_} :> Subscript["\[Phi]", i],
     {"Tr"} -> "Tr",
-    {"\[Epsilon]",i_,j_,k_}:>Superscript["\[Epsilon]",{i,j,k}],
-    {"\[Epsilon]i",i_,j_,k_}:>Subscript["\[Epsilon]",{i,j,k}],
-    {"TF",i_,j_,k_}:>Superscript[Subscript[Superscript["\[Lambda]",i],j],k],
-    SUNTF[i_,j_,k_] :> Superscript[Subscript[Superscript["\[Lambda]",i],j],k],
-    {n_Integer, 1 / 2, i_,j_} :> Superscript[Subscript[Subscript[SuperPlus["\[Psi]"], n], i],j],
-    {n_Integer, -1 / 2, i_,j_} :> Superscript[Subscript[Subscript[SuperMinus["\[Psi]"], n], i],j],
-    {n_Integer, 1 / 2 I, i_,j_} :> Subscript[Subscript[Subscript[SuperPlus["\[Psi]"], n], i],j],
-    {n_Integer, -1 / 2 I, i_,j_} :> Subscript[Subscript[Subscript[SuperMinus["\[Psi]"], n], i],j],
-    {"F+", n_, i_, j_,k_} :> Superscript[Subscript[Subscript[SuperPlus["F"], n], {i, j}],k],
-    {"F-", n_, i_, j_,k_} :> Superscript[Subscript[Subscript[SuperMinus["F"], n], {i, j}],k]};
+    {"\[Epsilon]", i_, j_, k_} :> Superscript["\[Epsilon]", {i, j, k}],
+    {"\[Epsilon]i", i_, j_, k_} :> Subscript["\[Epsilon]", {i, j, k}],
+    {"TF", i_, j_, k_} :> Superscript[Subscript[Superscript["\[Lambda]", i], j], k],
+    SUNTF[i_, j_, k_] :> Superscript[Subscript[Superscript["\[Lambda]", i], j], k],
+    {n_Integer, 1 / 2, i_, j_} :> Superscript[Subscript[Subscript[SuperPlus["\[Psi]"], n], i], j],
+    {n_Integer, -1 / 2, i_, j_} :> Superscript[Subscript[Subscript[SuperMinus["\[Psi]"], n], i], j],
+    {n_Integer, 1 / 2 I, i_, j_} :> Subscript[Subscript[Subscript[SuperPlus["\[Psi]"], n], i], j],
+    {n_Integer, -1 / 2 I, i_, j_} :> Subscript[Subscript[Subscript[SuperMinus["\[Psi]"], n], i], j],
+    {"F+", n_, i_, j_, k_} :> Superscript[Subscript[Subscript[SuperPlus["F"], n], {i, j}], k],
+    {"F-", n_, i_, j_, k_} :> Superscript[Subscript[Subscript[SuperMinus["F"], n], {i, j}], k]};
 
   (x /. dic)];
 
@@ -536,102 +532,102 @@ sortSpinorIndex[opListIn_, np_Integer, OptionsPattern[]] :=
       If[OptionValue@factor, AppendTo[outList, fac]];
       Return[outList];
     ];
-Options[ConstructOpInSpinIndexSort] = {mass -> All, factor -> False, traceLabel -> True, color -> False, youngTableaux->{}, ptclColorIndexs-><||>,FCSimplify -> False};
+Options[ConstructOpInSpinIndexSort] = {mass -> All, factor -> False, traceLabel -> True, color -> False, youngTableaux -> {}, ptclColorIndexs -> <||>, FCSimplify -> False};
 (*TODO BUG:what should it do if !OptionValue@traceLabel (pass OptionValue@traceLabel to sortSpinorIndex)*)
 ConstructOpInSpinIndexSort[amp_, np_Integer, opts : OptionsPattern[]] :=
     Module[{opList},
       If[OptionValue@traceLabel == True,
-        opList=sortSpinorIndex[ConstructOpInSpinIndex[amp, np, Sequence @@ FilterRules[{opts}, Options[ConstructOpInSpinIndex]]],
-        np, Sequence @@ FilterRules[{opts}, Options[sortSpinorIndex]]];
-        If[OptionValue@color ==True,
-          Return[ConstructOpInSpinIndexSortColorDLC[opList,np,OptionValue@youngTableaux,OptionValue@ptclColorIndexs, FCSimplify->OptionValue@FCSimplify]];
+        opList = sortSpinorIndex[ConstructOpInSpinIndex[amp, np, Sequence @@ FilterRules[{opts}, Options[ConstructOpInSpinIndex]]],
+          np, Sequence @@ FilterRules[{opts}, Options[sortSpinorIndex]]];
+        If[OptionValue@color == True,
+          Return[ConstructOpInSpinIndexSortColorDLC[opList, np, OptionValue@youngTableaux, OptionValue@ptclColorIndexs, FCSimplify -> OptionValue@FCSimplify]];
         ];
-    ];
-    Return[opList]
+      ];
+      Return[opList]
     ];
 
 (*Example: (ConstructOpInSpinIndexSort[#,5])&/@{ConstructAmp[{1,1,1/2,1/2,0},10,antispinor->{0,1,0,1,0}][[8]]}*)
 
 (*this only works for N * 3 Young Tableaux to N structure constants*)
-youngTableaux2StrConst[yt_]:=
-    Module[{corInd,outList},
-    corInd[cor_]:=Symbol["CI" <> ToString[cor]];
-    outList={};
+youngTableaux2StrConst[yt_] :=
+    Module[{corInd, outList},
+      corInd[cor_] := Symbol["CI" <> ToString[cor]];
+      outList = {};
       Do[
-        AppendTo[outList,{"\[Epsilon]i",corInd[yt[[1,i]]],corInd[yt[[2,i]]],corInd[yt[[3,i]]]}]
-        ,{i,Length[yt[[1]]]}];
-    Return[outList]
+        AppendTo[outList, {"\[Epsilon]i", corInd[yt[[1, i]]], corInd[yt[[2, i]]], corInd[yt[[3, i]]]}]
+        , {i, Length[yt[[1]]]}];
+      Return[outList]
     ];
 
 (*In ConstructOpInSpinIndexSortColorDLC, "\[Epsilon]i" and fermion spin 1/2 I label the anti fund rep for epsilon and antiquark*)
-Options[ConstructOpInSpinIndexSortColorDLC]={FCSimplify -> False}
+Options[ConstructOpInSpinIndexSortColorDLC] = {FCSimplify -> False}
 ConstructOpInSpinIndexSortColorDLC[opList_, np_Integer, yt_, ptclColorIndexs_, OptionsPattern[]] :=
     Module[{dummyIndexN, corInd, curPtcl, curPtclInv, curIndex, op},
       op = opList;
       dummyIndexN = Evaluate[Max[Flatten[yt]] + 1];
       corInd[cor_] := Symbol["CI" <> ToString[cor]];
       Do[curPtcl = Keys[ptclColorIndexs][[i]];
-      curPtclInv = -curPtcl + 2*np + 1;
+      curPtclInv = -curPtcl + 2 * np + 1;
       curIndex = ptclColorIndexs[curPtcl];
       Which[Length[curIndex] == 1,
         op =
-            op /. {{curPtcl, 1/2, i_} :> {curPtcl, 1/2, i, corInd[curIndex[[1]]]},
-              {curPtclInv, 1/2, i_} :> {-curPtcl + 2*np + 1, 1/2, i, corInd[curIndex[[1]]]},
-              {curPtcl, -1/2,i_} :> {curPtcl, -1/2, i, corInd[curIndex[[1]]]},
-              {curPtclInv, -1/2,i_} :> {-curPtcl + 2*np + 1, -1/2, i,corInd[curIndex[[1]]]}},
+            op /. {{curPtcl, 1 / 2, i_} :> {curPtcl, 1 / 2, i, corInd[curIndex[[1]]]},
+              {curPtclInv, 1 / 2, i_} :> {-curPtcl + 2 * np + 1, 1 / 2, i, corInd[curIndex[[1]]]},
+              {curPtcl, -1 / 2, i_} :> {curPtcl, -1 / 2, i, corInd[curIndex[[1]]]},
+              {curPtclInv, -1 / 2, i_} :> {-curPtcl + 2 * np + 1, -1 / 2, i, corInd[curIndex[[1]]]}},
         Length[curIndex] == 2,
         op =
-            op /. {{curPtcl, -1/2, i_} :> {curPtcl, -1/2 I, i, corInd[dummyIndexN]},
-              {curPtclInv, -1/2, i_} :> {curPtcl, -1/2 I, i, corInd[dummyIndexN]},
-              {curPtcl, 1/2, i_} :> {curPtcl, 1/2 I, i, corInd[dummyIndexN]},
-              {curPtclInv, 1/2, i_} :> {curPtcl, 1/2 I, i, corInd[dummyIndexN]}};
+            op /. {{curPtcl, -1 / 2, i_} :> {curPtcl, -1 / 2 I, i, corInd[dummyIndexN]},
+              {curPtclInv, -1 / 2, i_} :> {curPtcl, -1 / 2 I, i, corInd[dummyIndexN]},
+              {curPtcl, 1 / 2, i_} :> {curPtcl, 1 / 2 I, i, corInd[dummyIndexN]},
+              {curPtclInv, 1 / 2, i_} :> {curPtcl, 1 / 2 I, i, corInd[dummyIndexN]}};
         op =
             Insert[
               op, {"\[Epsilon]", corInd[curIndex[[1]]], corInd[curIndex[[2]]], corInd[dummyIndexN++]},
               Join[Position[op, {curPtcl, ___}], Position[op, {curPtclInv, ___}]]],
         Length[curIndex] == 3,
         op =
-            op /. {{"F-", curPtcl, i_, j_} :> {"F-", curPtcl, i, j, corInd[dummyIndexN+1]},
-              {"F-", curPtclInv, i_, j_} :> {"F-", curPtclInv, i, j,corInd[dummyIndexN+1]},
-              {"F+", curPtclInv, i_, j_} :> {"F+", curPtclInv, i, j, corInd[dummyIndexN+1]},
-              {"F+", curPtcl, i_, j_} :> {"F+", curPtcl, i, j, corInd[dummyIndexN+1]},
-              {"A", curPtcl, i_} :> {"A", curPtcl, i, corInd[dummyIndexN+1]},
-              {"A", curPtclInv, i_} :> {"A", curPtclInv, i, corInd[dummyIndexN+1]}};
+            op /. {{"F-", curPtcl, i_, j_} :> {"F-", curPtcl, i, j, corInd[dummyIndexN + 1]},
+              {"F-", curPtclInv, i_, j_} :> {"F-", curPtclInv, i, j, corInd[dummyIndexN + 1]},
+              {"F+", curPtclInv, i_, j_} :> {"F+", curPtclInv, i, j, corInd[dummyIndexN + 1]},
+              {"F+", curPtcl, i_, j_} :> {"F+", curPtcl, i, j, corInd[dummyIndexN + 1]},
+              {"A", curPtcl, i_} :> {"A", curPtcl, i, corInd[dummyIndexN + 1]},
+              {"A", curPtclInv, i_} :> {"A", curPtclInv, i, corInd[dummyIndexN + 1]}};
         op =
             Insert[
               op, {"\[Epsilon]", corInd[dummyIndexN], corInd[curIndex[[1]]], corInd[curIndex[[3]]]},
-              Join[Position[op, {"F+", curPtclInv, ___}], Position[op, {"F-", curPtcl, ___}],Position[op, {"A", curPtcl, ___}],Position[op, {"A", curPtclInV, ___}]]];
+              Join[Position[op, {"F+", curPtclInv, ___}], Position[op, {"F-", curPtcl, ___}], Position[op, {"A", curPtcl, ___}], Position[op, {"A", curPtclInV, ___}]]];
         op =
-          Insert[
-            op, {"TF", corInd[dummyIndexN+1],corInd[dummyIndexN++],corInd[curIndex[[2]]]},
-            Join[Position[op, {"F+", curPtclInv, ___}], Position[op, {"F-", curPtcl, ___}],Position[op, {"A", curPtcl, ___}],Position[op, {"A", curPtclInV, ___}]]];
-      dummyIndexN++]
-        ,{i, Length[Keys[ptclColorIndexs]]}];
+            Insert[
+              op, {"TF", corInd[dummyIndexN + 1], corInd[dummyIndexN++], corInd[curIndex[[2]]]},
+              Join[Position[op, {"F+", curPtclInv, ___}], Position[op, {"F-", curPtcl, ___}], Position[op, {"A", curPtcl, ___}], Position[op, {"A", curPtclInV, ___}]]];
+        dummyIndexN++]
+        , {i, Length[Keys[ptclColorIndexs]]}];
       op = Join[youngTableaux2StrConst[yt], op];
-      If[OptionValue@FCSimplify==False,Return[op],Return[ColorSimplify[op]]];
+      If[OptionValue@FCSimplify == False, Return[op], Return[ColorSimplify[op]]];
     ];
 
-ColorSimplify[opList_List]:=
-    Module[{EpsilonList,outList,lambdaList,curItem},
-      EpsilonList={};
-      outList={};
-      lambdaList={};
+ColorSimplify[opList_List] :=
+    Module[{EpsilonList, outList, lambdaList, curItem},
+      EpsilonList = {};
+      outList = {};
+      lambdaList = {};
       Do[
-        curItem=opList[[i]];
-        Which[curItem[[1]]=="\[Epsilon]" || curItem[[1]]=="\[Epsilon]i",
-          AppendTo[EpsilonList,curItem],
-          curItem[[1]]=="TF",
-          AppendTo[lambdaList,curItem],
-          curItem[[1]]!="\[Epsilon]" && curItem[[1]]!="\[Epsilon]i" && curItem[[1]]!="\[Epsilon]",
-          AppendTo[outList,curItem]
+        curItem = opList[[i]];
+        Which[curItem[[1]] == "\[Epsilon]" || curItem[[1]] == "\[Epsilon]i",
+          AppendTo[EpsilonList, curItem],
+          curItem[[1]] == "TF",
+          AppendTo[lambdaList, curItem],
+          curItem[[1]] != "\[Epsilon]" && curItem[[1]] != "\[Epsilon]i" && curItem[[1]] != "\[Epsilon]",
+          AppendTo[outList, curItem]
         ]
-        ,{i,Length[opList]}];
-      EpsilonList=EpsilonList/.{{"\[Epsilon]",i_,j_,k_}:>CLC[i,j,k],{"\[Epsilon]i",i_,j_,k_}:>CLC[i,j,k]};
-      EpsilonList=(Times@@EpsilonList)//Contract;
-      EpsilonList=EpsilonList/.{CartesianIndex[i_] :> i, CartesianPair -> SUNFDelta};
-      lambdaList=lambdaList/. {"TF", i_,j_,k_}:>SUNTF[i,j,k];
-      lambdaList = ((EpsilonList * Times@@lambdaList ) // SUNFSimplify)/.{SUNTrace[i_, Explicit -> False]:>SUNTrace[i, Explicit -> True]}//SUNFSimplify//SUNSimplify//FCE;
-      Return[Join[{lambdaList},outList]]
+        , {i, Length[opList]}];
+      EpsilonList = EpsilonList /. {{"\[Epsilon]", i_, j_, k_} :> CLC[i, j, k], {"\[Epsilon]i", i_, j_, k_} :> CLC[i, j, k]};
+      EpsilonList = (Times @@ EpsilonList) // Contract;
+      EpsilonList = EpsilonList /. {CartesianIndex[i_] :> i, CartesianPair -> SUNFDelta};
+      lambdaList = lambdaList /. {"TF", i_, j_, k_} :> SUNTF[i, j, k];
+      lambdaList = ((EpsilonList * Times @@ lambdaList ) // SUNFSimplify) /. {SUNTrace[i_, Explicit -> False] :> SUNTrace[i, Explicit -> True]} // SUNFSimplify // SUNSimplify // FCE;
+      Return[Join[{lambdaList}, outList]]
     ];
 
 
@@ -659,10 +655,10 @@ SpinorObj2FeynCalField[opListIn_] :=
         {"F-", n_, i_, j_} :> FieldStrength[i, j, corIndex[corInN]],
         {"F+", n_, i_, j_, c_} :> FieldStrength[i, j, c],
         {"F-", n_, i_, j_, c_} :> FieldStrength[i, j, c],
-        {"f", i_, j_, k_} :> SUNF[i,j,k],
-        {"TF", i_, j_, k_} :> SUNTF[i,j,k],
-        {"\[Epsilon]", i_,j_,k_}:>Eps[i,j,k],
-        {"\[Epsilon]i", i_,j_,k_}:>Eps[i,j,k],
+        {"f", i_, j_, k_} :> SUNF[i, j, k],
+        {"TF", i_, j_, k_} :> SUNTF[i, j, k],
+        {"\[Epsilon]", i_, j_, k_} :> Eps[i, j, k],
+        {"\[Epsilon]i", i_, j_, k_} :> Eps[i, j, k],
         {"\[Phi]", i_} :> QuantumField[\[Phi]]}; (*===TODO===Need to change for id ptcl===TODO===*)
       outList = {};
       curObj = opListIn[[1]];
