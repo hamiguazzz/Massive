@@ -91,9 +91,9 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
             "_{" <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k] <> "}",
         (*contracted generator*)
         {"F+", number, i_, j_, k_, l_} :> "{" <> strength <> "}" <> "_{R"
-            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}",
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> " " <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}",
         {"F-", number, i_, j_, k_, l_} :> "{" <> strength <> "}" <> "_{L"
-            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}",
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> " " <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}",
         {"A", number, i_, k_, l_} :> "{" <> field <> "}" <>
             "_{" <> " " <> Index2Greek[i] <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}"
       };
