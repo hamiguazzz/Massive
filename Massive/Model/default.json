@@ -1,0 +1,86 @@
+{
+  "h": {
+    "spin": 0,
+    "field name": "h",
+    "field strength name": "",
+    "mass": 0,
+    "color": ""
+  },
+  "ve": {
+    "spin": 0.5,
+    "field name": "\\nu_e",
+    "field strength name": "",
+    "mass": 1,
+    "color": ""
+  },
+  "vmu": {
+    "spin": 0.5,
+    "field name": "\\nu_\\mu",
+    "field strength name": "",
+    "mass": 1,
+    "color": ""
+  },
+  "u": {
+    "spin": 0.5,
+    "field name": "u",
+    "field strength name": "",
+    "mass": 1,
+    "color": "q"
+  },
+  "ubar": {
+    "spin": 0.5,
+    "field name": "\\bar{u}",
+    "field strength name": "",
+    "mass": 1,
+    "color": "aq"
+  },
+  "d": {
+    "spin": 0.5,
+    "field name": "d",
+    "field strength name": "",
+    "mass": 1,
+    "color": "q"
+  },
+  "dbar": {
+    "spin": 0.5,
+    "field name": "\\bar{d}",
+    "field strength name": "",
+    "mass": 1,
+    "color": "aq"
+  },
+  "gamma": {
+    "spin": 1,
+    "field name": "A",
+    "field strength name": "{F}",
+    "mass": 0,
+    "color": ""
+  },
+  "W+": {
+    "spin": 1,
+    "field name": "{(W^+)}",
+    "field strength name": "{(W^+)}",
+    "mass": 1,
+    "color": ""
+  },
+  "W-": {
+    "spin": 1,
+    "field name": "{(W^-)}",
+    "field strength name": "{(W^-)}",
+    "mass": 1,
+    "color": ""
+  },
+  "Z": {
+    "spin": 1,
+    "field name": "Z",
+    "field strength name": "Z",
+    "mass": 1,
+    "color": ""
+  },
+  "g": {
+    "spin": 1,
+    "field name": "g",
+    "field strength name": "G",
+    "mass": 0,
+    "color": "g"
+  }
+}
