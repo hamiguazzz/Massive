@@ -284,7 +284,12 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
     {Length@(#[[2]][[1]]), Length@(#[[2]][[1]][[1]])}
     , " calc cost ", #[[1]]]];#[[2]])& // SparseArray;
   (
-    colorOps = Table[(permuteIdenticalPolyDict[id] /. colorIdenticalOpDict[id]), {id, identicalList}];
+    colorOps = Table[
+      If[KeyExistsQ[colorIdenticalOpDict,id],
+        permuteIdenticalPolyDict[id] /. colorIdenticalOpDict[id],
+        IdentityMatrix[Length@colorBasis]
+      ],
+      {id, identicalList}];
     (*    totalColorFactor = Max@Abs@Eigenvalues@First@colorOps;*)
     (*    colorOps = (# / totalColorFactor)& /@ colorOps;*)
   ) // AbsoluteTiming // (If[OptionValue@log, LogPri["Color matrix ",

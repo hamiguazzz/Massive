@@ -29,18 +29,24 @@ ExportAmp2Tex[expr_] := ExportAmp2Tex[expr, defaultAbkFun, defaultSbkFun];
 
 (*Label Section*)
 (*Lorentz Label start with "LI"*)
-Number2Greek = If[#2 > 0, #1 <> ToString[#2], #1] &[Alphabet["Greek"][[Mod[11 + #, 24]]], Quotient[#, 24]] &;
-Number2Latin = If[#2 > 0, #1 <> ToString[#2], #1] &[Alphabet[][[Mod[0 + #, 26]]], Quotient[#, 26]] &;
+allowedLorentz = {"\[Mu]", "\[Nu]", "\[Rho]", "\[Sigma]", "\[Xi]", "\[Tau]",
+  "\[Zeta]", "\[Eta]", "\[Theta]", "\[Iota]", "\[Kappa]", "\[Lambda]"};
+Number2Greek = ((If[#2 > 0, "{" <> ToString@TeXForm@#1 <> "_" <> ToString[#2 + 1] <> "}", ToString@TeXForm@#1]&)[
+  allowedLorentz[[Mod[#, Length@allowedLorentz]]], Quotient[#, Length@allowedLorentz]]) &;
+Number2Latin = ((If[#2 > 0, "{" <> ToString@#1 <> "_" <> ToString[#2 + 1] <> "}", ToString@#1]&)[
+  Alphabet[][[Mod[0 + #, 26]]], Quotient[#, 26]]) &;
 (*===TODO===remove letters not used for label ===TODO===*)
 numberLorentzIndex[x_] := StringSplit[x, "LI"] // First // ToExpression;
 numberColorIndex[x_] := StringSplit[x, "CI"] // First // ToExpression;
-Index2Greek[x_] := x // ToString // numberLorentzIndex // Number2Greek // TeXForm // ToString[#]&;
-Index2Latin[x_] := x // ToString // numberColorIndex // Number2Latin // ToString[#]&;
+Index2Greek[x_] := x // ToString // numberLorentzIndex // Number2Greek;
+Index2Latin[x_] := x // ToString // numberColorIndex // Number2Latin;
 
 (*TODO Use external dict to change field name*)
 (*TODO Delete field number index*)
-ExportWelyOp2Tex[weylop_Plus] := (ExportSpinorObj2Tex@#)& /@ Sum2List[weylop] // StringRiffle[#, "+"]&;
-ExportWelyOp2Tex[weylop_] := ExportSpinorObj2Tex@weylop;
+Options[ExportWelyOp2Tex] = Options[ExportSpinorObj2Tex];
+ExportWelyOp2Tex[weylop_Plus, opts : OptionsPattern[]] := (ExportSpinorObj2Tex[#, opts])& /@ Sum2List[weylop] //
+    StringRiffle[#, "+"]&;
+ExportWelyOp2Tex[weylop_, opts : OptionsPattern[]] := ExportSpinorObj2Tex[#, opts]&@weylop;
 (*Example external-><|1->{"W^+","W^+"},2->{"W^-","W^-"},3->{"g","G"},4->{"A","F"},5->{"\\nu_e"},6->{"e"}|>*)
 Options[ExportSpinorObj2Tex] := {external -> "Default"};
 ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
@@ -77,25 +83,27 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
   FieldTranslationRule[number_Integer -> {field_String, strength_String}] :=
       {
         {"A", number, i_} :> "{" <> field <> "}" <> "_{" <> " " <> Index2Greek[i] <> "}",
-        {"F+", number, i_, j_} :> "{" <> strength <> "}" <> "_{R"
+        {"F+", number, i_, j_} :> "{" <> strength <> "}" <> "^{+}" <> "_{"
             <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
-        {"F-", number, i_, j_} :> "{" <> strength <> "}" <> "_{L"
+        {"F-", number, i_, j_} :> "{" <> strength <> "}" <> "^{-}" <> "_{"
             <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
         (*with color index*)
         (*adjoint*)
-        {"F+", number, i_, j_, k_} :> "{" <> strength <> "}" <> "_{R"
-            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{" <> Index2Latin[k] <> "}",
-        {"F-", number, i_, j_, k_} :> "{" <> strength <> "}" <> "_{L"
-            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{" <> Index2Latin[k] <> "}",
+        {"F+", number, i_, j_, k_} :> "{" <> strength <> "}" <> "_{"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{+" <> Index2Latin[k] <> "}",
+        {"F-", number, i_, j_, k_} :> "{" <> strength <> "}" <> "_{"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{-" <> Index2Latin[k] <> "}",
         {"A", number, i_, k_} :> "{" <> field <> "}" <>
             "_{" <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k] <> "}",
         (*contracted generator*)
-        {"F+", number, i_, j_, k_, l_} :> "{" <> strength <> "}" <> "_{R"
-            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> " " <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}",
-        {"F-", number, i_, j_, k_, l_} :> "{" <> strength <> "}" <> "_{L"
-            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> " " <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}",
+        {"F+", number, i_, j_, k_, l_} :> "{" <> strength <> "}" <> "_{"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> " " <> Index2Latin[k] <>
+            "}^{+" <> Index2Latin[l] <> "}",
+        {"F-", number, i_, j_, k_, l_} :> "{" <> strength <> "}" <> "_{"
+            <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> " " <> Index2Latin[k] <>
+            "}^{-" <> Index2Latin[l] <> "}",
         {"A", number, i_, k_, l_} :> "{" <> field <> "}" <>
-            "_{" <> " " <> Index2Greek[i] <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}"
+            "_{" <> Index2Greek[i] <> " " <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}"
       };
 
   If[OptionValue@external === "Default",
@@ -104,19 +112,29 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
       {n_Integer, 1 / 2, i_} :> "\\psi^R_" <> ToString[n],
       {n_Integer, -(1 / 2), i_} :> "\\psi^L_" <> ToString[n],
       {"A", n_, i_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}",
-      {"F+", n_, i_, j_} :> "{F_R}_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
-      {"F-", n_, i_, j_} :> "{F_L}_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
+      {"F+", n_, i_, j_} :> "{F}^{+}_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
+      {"F-", n_, i_, j_} :> "{F}^{-}_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
       (*with color index*)
       {n_Integer, 1 / 2, i_, j_} :> "{\\psi_R}_" <> ToString[n] <> "^{" <> Index2Latin[j] <> "}",
       {n_Integer, -(1 / 2), i_, j_} :> "{\\psi_L}" <> ToString[n] <> "^{" <> Index2Latin[j] <> "}" ,
       {n_Integer, 1 / 2 I, i_, j_} :> "\\bar{\\psi}_{R" <> ToString[n] <> " " <> Index2Latin[j] <> "}",
       {n_Integer, -(1 / 2) I, i_, j_} :> "\\bar{\\psi}_{L" <> ToString[n] <> " " <> Index2Latin[j] <> "}" ,
 
-      {"F+", n_, i_, j_, k_} :> "F_{R" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{+" <>
-          Index2Latin[k] <> "}",
-      {"F-", n_, i_, j_, k_} :> "F_{L" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{-" <>
-          Index2Latin[k] <> "}",
-      {"A", n_, i_, k_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k]
+      {"F+", n_, i_, j_, k_} :> "{F}_{" <> ToString[n] <> " "
+          <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{+" <> Index2Latin[k] <> "}",
+      {"F-", n_, i_, j_, k_} :> "{F}_{" <> ToString[n] <> " "
+          <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}^{-" <> Index2Latin[k] <> "}",
+      {"A", n_, i_, k_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}^{" <> Index2Latin[k] <> "}",
+      {"F+", n_, i_, j_, k_, l_} :> "{F}_{" <> ToString@n <> " "
+          <> Index2Greek[i] <> " " <> Index2Greek[j] <> " " <> Index2Latin[k] <>
+          "}^{+" <> Index2Latin[l] <> "}",
+      {"F-", n_, i_, j_, k_, l_} :> "{F}_{" <> ToString@n <> " "
+          <> Index2Greek[i] <> " " <> Index2Greek[j] <> " " <> Index2Latin[k] <>
+          "}^{-" <> Index2Latin[l] <> "}",
+      {"A", n_, i_, k_, l_} :> "A" <>
+          "_{" <> ToString@n <> " "
+          <> Index2Greek[i] <> " " <> Index2Latin[k] <> "}^{" <> Index2Latin[l] <> "}"
+
     },
     externalRules = Join @@ (FieldTranslationRule /@ Normal@OptionValue@external);
   ];
@@ -159,15 +177,20 @@ Options[ExportTexList2Array] = {
   prefix -> "\t",
   suffix -> "\\\\\n"
 };
+ExportTexList2Array[{}, OptionsPattern[]] := "\text{None}\n";
 ExportTexList2Array[l_List, OptionsPattern[]] /; StringQ[l[[1]]] :=
     With[{},
-      "\\begin{" <> OptionValue@env <> "}"
-          <> If[OptionValue@param =!= "" && OptionValue@param =!= Null,
-        "{" <> OptionValue@param <> "}", ""]
-          <> If[OptionValue@option =!= "" && OptionValue@option =!= Null,
-        "[" <> OptionValue@option <> "]\n", "\n"]
-          <> StringJoin[(OptionValue@prefix <> # <> OptionValue@suffix)& /@ l]
-          <> "\\end{" <> OptionValue@env <> "}\n"
+      If[Length@l == 1,
+        l[[1]] <> "\n"
+        ,
+        "\\begin{" <> OptionValue@env <> "}"
+            <> If[OptionValue@param =!= "" && OptionValue@param =!= Null,
+          "{" <> OptionValue@param <> "}", ""]
+            <> If[OptionValue@option =!= "" && OptionValue@option =!= Null,
+          "[" <> OptionValue@option <> "]\n", "\n"]
+            <> StringJoin[(OptionValue@prefix <> # <> OptionValue@suffix)& /@ l]
+            <> "\\end{" <> OptionValue@env <> "}\n"
+      ]
     ];
 (*Example: "\\begin{array}{c}\n \t" <>
      StringRiffle[#, "\\\\ \n\t"] &@(# /. TraditionalForm[x_] -> x &@
