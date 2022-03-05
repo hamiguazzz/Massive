@@ -675,8 +675,49 @@ ColorSimplify[opList_List] :=
 
     ];
 
+ColorOpReduce[expr_] := expr //. {
+  EpsColor[a_, b_, c_] * EpsColor[a_, b_, d_] :> DeltaColor[c, d],
+  DeltaColor[a_, b_] * DeltaColor[a_, c_] :> DeltaColor[b, c],
+  DeltaColor[a_, b_] * DeltaColor[a_, b_] :> 1
+};
+DeltaColor[i_, j_] /; i === j := 0;
+SetAttributes[EpsColor, Orderless];
+SetAttributes[DeltaColor, Orderless];
 
+EpsilonSimplify[opList_List] := Module[{epsList, othersList, epsExpr, deltaList, deltaReplaceList},
+  epsList = Select[opList, ((First@#) === "\[Epsilon]")&];
+  othersList = Complement[opList, epsList];
+  epsExpr = epsList /. {
+    {"\[Epsilon]", i_, j_, k_} :> EpsColor[i, j, k],
+    {"\[Delta]", i_, j_} :> DeltaColor[i, j]
+  };
+  epsExpr = Times @@ epsExpr // ColorOpReduce;
+  epsList = List @@ epsExpr /.
+      {
+        EpsColor[i_, j_, k_] :> {"\[Epsilon]", i, j, k},
+        DeltaColor[i_, j_] :> {"\[Delta]", i, j}
+      };
+  deltaList = Select[epsList, First@# === "\[Delta]"&];
+  deltaReplaceList = deltaList
+      /. ( {"\[Delta]", i_, j_} :> (i -> j));
+  epsList = Complement[epsList, deltaList];
+  Return[Join[epsList, othersList] /. deltaReplaceList];
+];
 
+RearrangeIndex[indexHead_String] := RearrangeIndex[#, indexHead]&;
+RearrangeIndex[opList_List, indexHead_String] := Module[
+  {headLength = StringLength@indexHead, TestIndexHead, allIndices, indicesReplaceRules},
+  TestIndexHead[expr_] := If[StringLength@ToString@expr <= headLength,
+    False,
+    StringTake[#, headLength]&@ToString@expr === indexHead];
+  allIndices = Flatten@opList // Select[TestIndexHead];
+  allIndices = allIndices // DeleteDuplicates
+      // SortBy[(ToExpression@Last@StringSplit[ToString@#, indexHead])&];
+  indicesReplaceRules = Table[
+    allIndices[[i]] -> Symbol[indexHead <> ToString@i]
+    , {i, Length@allIndices}];
+  Return[opList /. indicesReplaceRules];
+];
 
 SpinorObj2FeynCalField[opListIn_] :=
     Module[
