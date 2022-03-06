@@ -546,7 +546,7 @@ sortSpinorIndex[opListIn_, np_Integer, OptionsPattern[]] :=
       Return[outList];
     ];
 Options[ConstructOpInSpinIndexSort] = {mass -> All, factor -> False, traceLabel -> True,
-  color -> False, youngTableaux -> {}, ptclColorIndexs -> <||>, FCSimplify -> False, GluonColorIndex -> True} ;
+  color -> False, youngTableaux -> {}, ptclColorIndexs -> <||>, FCSimplify -> False,EpsSimplify->False, GluonColorIndex -> True} ;
 (*TODO BUG:what should it do if !OptionValue@traceLabel (pass OptionValue@traceLabel to sortSpinorIndex)*)
 ConstructOpInSpinIndexSort[amp_, np_Integer, opts : OptionsPattern[]] :=
     Module[{opList},
@@ -554,7 +554,7 @@ ConstructOpInSpinIndexSort[amp_, np_Integer, opts : OptionsPattern[]] :=
         opList = sortSpinorIndex[ConstructOpInSpinIndex[amp, np, Sequence @@ FilterRules[{opts}, Options[ConstructOpInSpinIndex]]],
           np, Sequence @@ FilterRules[{opts}, Options[sortSpinorIndex]]];
         If[OptionValue@color == True,
-          Return[ConstructOpInSpinIndexSortColorDLC[opList, np, OptionValue@youngTableaux, OptionValue@ptclColorIndexs, FCSimplify -> OptionValue@FCSimplify, GluonColorIndex -> OptionValue@GluonColorIndex ]];
+          Return[ConstructOpInSpinIndexSortColorDLC[opList, np, OptionValue@youngTableaux, OptionValue@ptclColorIndexs, FCSimplify -> OptionValue@FCSimplify,  EpsSimplify -> OptionValue@EpsSimplify, GluonColorIndex -> OptionValue@GluonColorIndex ]];
         ];
       ];
       Return[opList]
@@ -574,7 +574,7 @@ youngTableaux2StrConst[yt_] :=
     ];
 
 (*In ConstructOpInSpinIndexSortColorDLC, "\[Epsilon]i" and fermion spin 1/2 I label the anti fund rep for epsilon and antiquark*)
-Options[ConstructOpInSpinIndexSortColorDLC] = {FCSimplify -> False, GluonColorIndex -> True};
+Options[ConstructOpInSpinIndexSortColorDLC] = {FCSimplify -> False, EpsSimplify->False, GluonColorIndex -> True};
 ConstructOpInSpinIndexSortColorDLC[opList_, np_Integer, yt_, ptclColorIndexs_, OptionsPattern[]] :=
     Module[{dummyIndexN, corInd, curPtcl, curPtclInv, curIndex, op},
       op = opList;
@@ -647,7 +647,13 @@ ConstructOpInSpinIndexSortColorDLC[opList_, np_Integer, yt_, ptclColorIndexs_, O
       ]
         , {i, Length[Keys[ptclColorIndexs]]}];
       op = Join[youngTableaux2StrConst[yt], op];
-      If[OptionValue@FCSimplify == False, Return[op], Return[ColorSimplify[op]]];
+      Which[
+        OptionValue@FCSimplify == True,
+        Return[ColorSimplify[op]],
+        OptionValue@EpsSimplify == True,
+        Return[op/. {"\[Epsilon]i" -> "\[Epsilon]"} // EpsilonSimplify // RearrangeIndex["CI"]]
+      ];
+      Return[op]
     ];
 
 ColorSimplify[opList_List] :=
