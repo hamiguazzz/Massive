@@ -302,7 +302,7 @@ GetPermutedPolyFromYT[ytShape_List] := Module[
   Return[totalPolys];
 ];
 
-ReplaceBraNumber[rules_] := ReplaceBraNumber[#, {}]&;
+ReplaceBraNumber[rules_] := ReplaceBraNumber[#, rules]&;
 ReplaceBraNumber[sb[l___], rules_] := sb @@ (List@l /. rules);
 ReplaceBraNumber[ab[l___], rules_] := ab @@ (List@l /. rules);
 ReplaceBraNumber[expr_, rules_] :=
