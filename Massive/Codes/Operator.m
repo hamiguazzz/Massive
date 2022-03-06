@@ -683,6 +683,24 @@ ColorSimplify[opList_List] :=
 
     ];
 
+(*This funtion applies delta to operator, works NOT on polynomial *)
+ColorDeltaApply[deltaListTimes_,opList_]:=
+    Module[{deltaList,ruleList},
+      ruleList={};
+      deltaList=List@@deltaListTimes;
+      Do[If[Head[deltaList[[i]]]==SUNFDelta,
+        AppendTo[ruleList,Rule @@ deltaList[[i]]]
+      ]
+        ,{i,Length[deltaList]}];
+      opList/.ruleList
+    ];
+
+ColorDeltaApply[opList_]:=ColorDeltaApply[opList[[1]], opList[[2 ;;]]];
+
+(*Example: ConstructOpInSpinIndexSort[sb[3, 7]^2 sb[4, 8]^2, 4, FCSimplify -> True, color -> True,
+   youngTableaux -> {{1, 2}, {3, 4}, {5, 6}}, ptclColorIndexs -> <|3 -> {1, 2, 3}, 4 -> {4, 5, 6}|>,
+   mass -> {1, 2}] // ColorDeltaApply // RearrangeIndex["CI"]*)
+
 ColorOpReduce[expr_] := expr //. {
   EpsColor[a_, b_, c_] * EpsColor[a_, b_, d_] :> DeltaColor[c, d],
   DeltaColor[a_, b_] * DeltaColor[a_, c_] :> DeltaColor[b, c],
