@@ -131,7 +131,7 @@ OrganizeStringAssociation[texDict_?AssociationQ,
   result = result <> StringJoin@@((
     fun@# <> endLine
         <> "$$" <> endLine
-        <> ToString@texDict[#] <> endLine
+        <> ToString@texDict[#]
         <> "$$" <> endLine
   )&/@keys);
   If[OptionValue@exportPath =!= "",
