@@ -546,7 +546,8 @@ sortSpinorIndex[opListIn_, np_Integer, OptionsPattern[]] :=
       Return[outList];
     ];
 Options[ConstructOpInSpinIndexSort] = {mass -> All, factor -> False, traceLabel -> True,
-  color -> False, youngTableaux -> {}, ptclColorIndexs -> <||>, FCSimplify -> False,EpsSimplify->False, GluonColorIndex -> True} ;
+  color -> False, youngTableaux -> {}, ptclColorIndexs -> <||>, FCSimplify -> False, EpsSimplify -> True,
+  GluonColorIndex -> True} ;
 (*TODO BUG:what should it do if !OptionValue@traceLabel (pass OptionValue@traceLabel to sortSpinorIndex)*)
 ConstructOpInSpinIndexSort[amp_, np_Integer, opts : OptionsPattern[]] :=
     Module[{opList},
@@ -554,7 +555,7 @@ ConstructOpInSpinIndexSort[amp_, np_Integer, opts : OptionsPattern[]] :=
         opList = sortSpinorIndex[ConstructOpInSpinIndex[amp, np, Sequence @@ FilterRules[{opts}, Options[ConstructOpInSpinIndex]]],
           np, Sequence @@ FilterRules[{opts}, Options[sortSpinorIndex]]];
         If[OptionValue@color == True,
-          Return[ConstructOpInSpinIndexSortColorDLC[opList, np, OptionValue@youngTableaux, OptionValue@ptclColorIndexs, FCSimplify -> OptionValue@FCSimplify,  EpsSimplify -> OptionValue@EpsSimplify, GluonColorIndex -> OptionValue@GluonColorIndex ]];
+          Return[ConstructOpInSpinIndexSortColorDLC[opList, np, OptionValue@youngTableaux, OptionValue@ptclColorIndexs, FCSimplify -> OptionValue@FCSimplify, EpsSimplify -> OptionValue@EpsSimplify, GluonColorIndex -> OptionValue@GluonColorIndex ]];
         ];
       ];
       Return[opList]
@@ -574,7 +575,7 @@ youngTableaux2StrConst[yt_] :=
     ];
 
 (*In ConstructOpInSpinIndexSortColorDLC, "\[Epsilon]i" and fermion spin 1/2 I label the anti fund rep for epsilon and antiquark*)
-Options[ConstructOpInSpinIndexSortColorDLC] = {FCSimplify -> False, EpsSimplify->False, GluonColorIndex -> True};
+Options[ConstructOpInSpinIndexSortColorDLC] = {FCSimplify -> False, EpsSimplify -> True, GluonColorIndex -> True};
 ConstructOpInSpinIndexSortColorDLC[opList_, np_Integer, yt_, ptclColorIndexs_, OptionsPattern[]] :=
     Module[{dummyIndexN, corInd, curPtcl, curPtclInv, curIndex, op},
       op = opList;
@@ -651,7 +652,7 @@ ConstructOpInSpinIndexSortColorDLC[opList_, np_Integer, yt_, ptclColorIndexs_, O
         OptionValue@FCSimplify == True,
         Return[ColorSimplify[op]],
         OptionValue@EpsSimplify == True,
-        Return[op/. {"\[Epsilon]i" -> "\[Epsilon]"} // EpsilonSimplify // RearrangeIndex["CI"]]
+        Return[op // EpsilonListSimplify // RearrangeIndex["CI"]]
       ];
       Return[op]
     ];
@@ -684,18 +685,18 @@ ColorSimplify[opList_List] :=
     ];
 
 (*This funtion applies delta to operator, works NOT on polynomial *)
-ColorDeltaApply[deltaListTimes_,opList_]:=
-    Module[{deltaList,ruleList},
-      ruleList={};
-      deltaList=List@@deltaListTimes;
-      Do[If[Head[deltaList[[i]]]==SUNFDelta,
-        AppendTo[ruleList,Rule @@ deltaList[[i]]]
+ColorDeltaApply[deltaListTimes_, opList_] :=
+    Module[{deltaList, ruleList},
+      ruleList = {};
+      deltaList = List @@ deltaListTimes;
+      Do[If[Head[deltaList[[i]]] == SUNFDelta,
+        AppendTo[ruleList, Rule @@ deltaList[[i]]]
       ]
-        ,{i,Length[deltaList]}];
-      opList/.ruleList
+        , {i, Length[deltaList]}];
+      opList /. ruleList
     ];
 
-ColorDeltaApply[opList_]:=ColorDeltaApply[opList[[1]], opList[[2 ;;]]];
+ColorDeltaApply[opList_] := ColorDeltaApply[opList[[1]], opList[[2 ;;]]];
 
 (*Example: ConstructOpInSpinIndexSort[sb[3, 7]^2 sb[4, 8]^2, 4, FCSimplify -> True, color -> True,
    youngTableaux -> {{1, 2}, {3, 4}, {5, 6}}, ptclColorIndexs -> <|3 -> {1, 2, 3}, 4 -> {4, 5, 6}|>,
@@ -710,24 +711,21 @@ DeltaColor[i_, j_] /; i === j := 0;
 SetAttributes[EpsColor, Orderless];
 SetAttributes[DeltaColor, Orderless];
 
-EpsilonSimplify[opList_List] := Module[{epsList, othersList, epsExpr, deltaList, deltaReplaceList},
-  epsList = Select[opList, ((First@#) === "\[Epsilon]")&];
-  othersList = Complement[opList, epsList];
-  epsExpr = epsList /. {
+EpsilonListSimplify[opList_List] := Module[
+  {epsPosList, epsExprList, epsList, epsExpr, deltaList, deltaReplaceList, canceledEpsPos},
+  epsPosList = Position[opList, {"\[Epsilon]" | "\[Epsilon]i", ___}, 1];
+  If[Length@epsPosList == 0, Return[opList]];
+  epsExprList = opList[[Flatten@epsPosList]] /. {
     {"\[Epsilon]", i_, j_, k_} :> EpsColor[i, j, k],
-    {"\[Delta]", i_, j_} :> DeltaColor[i, j]
-  };
-  epsExpr = Times @@ epsExpr // ColorOpReduce;
-  epsList = List @@ epsExpr /.
-      {
-        EpsColor[i_, j_, k_] :> {"\[Epsilon]", i, j, k},
-        DeltaColor[i_, j_] :> {"\[Delta]", i, j}
-      };
-  deltaList = Select[epsList, First@# === "\[Delta]"&];
-  deltaReplaceList = deltaList
-      /. ( {"\[Delta]", i_, j_} :> (i -> j));
+    {"\[Epsilon]i", i_, j_, k_} :> EpsColor[i, j, k]};
+  epsExpr = Times @@ epsExprList // ColorOpReduce;
+  epsList = List @@ epsExpr;
+  deltaList = Select[epsList, (Head@# === DeltaColor) &];
   epsList = Complement[epsList, deltaList];
-  Return[Join[epsList, othersList] /. deltaReplaceList];
+  deltaReplaceList = deltaList /. (DeltaColor[i_, j_] :> (i -> j));
+  canceledEpsPos = epsPosList[[Flatten@
+      Position[epsExprList, e_EpsColor /; ! MemberQ[epsList, e], 1]]];
+  Return[Delete[opList, canceledEpsPos] /. deltaReplaceList];
 ];
 
 RearrangeIndex[indexHead_String] := RearrangeIndex[#, indexHead]&;

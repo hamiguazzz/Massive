@@ -14,12 +14,12 @@ Print["Loading MassiveBasis..."];
 $MassiveVerbose = False;
 LogPri[mess___] := If[$MassiveVerbose, Print[mess]];
 
-ImportModel[FileNameJoin[{$MassiveDir, "Model", "default.json"}]];
 If[!Global`$DEBUG, Begin["`Private`"]];
 
 Do[Get[file], {file, Global`$CodeFiles}];
 
 If[!Global`$DEBUG, End[]];
+ImportModel[FileNameJoin[{$MassiveDir, "Model", "default.json"}]];
 
 If[!Global`$DEBUG, EndPackage[]];
 
