@@ -637,7 +637,9 @@ ConstructOpInSpinIndexSortColorDLC[opList_, np_Integer, yt_, ptclColorIndexs_, O
                 op, {"\[Epsilon]", corInd[dummyIndexN++], corInd[curIndex[[1]]], corInd[curIndex[[3]]]},
                 Join[
                   Position[op, {"F+", curPtclInv, ___}],
+                  Position[op, {"F+", curPtcl, ___}],
                   Position[op, {"F-", curPtcl, ___}],
+                  Position[op, {"F-", curPtclInv, ___}],
                   Position[op, {"A", curPtcl, ___}],
                   Position[op, {"A", curPtclInv, ___}]]];
 
