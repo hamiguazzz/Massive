@@ -41,19 +41,83 @@ numberColorIndex[x_] := StringSplit[x, "CI"] // First // ToExpression;
 Index2Greek[x_] := x // ToString // numberLorentzIndex // Number2Greek;
 Index2Latin[x_] := x // ToString // numberColorIndex // Number2Latin;
 
-(*TODO Use external dict to change field name*)
-(*TODO Delete field number index*)
+AddBrasToSpinorObjList[spinorOpList_List] := Module[
+  {SpinorObjIsDQ, SpinorObjIsPsiQ, SpinorObjIsFieldQ,
+    flag1, flag2, tempList, resultList, indexNow, op
+  },
+  SpinorObjIsDQ[singleOp_List] := MatchQ[singleOp, {"D", _Integer, _}];
+  SpinorObjIsPsiQ[singleOp_List] := MatchQ[singleOp, {_Integer, 1 / 2 | -(1 / 2) | 1 / 2 I | -(1 / 2) I, ___}];
+  SpinorObjIsFieldQ[singleOp_List] := MatchQ[singleOp, {"\[Phi]" | "A" | "F-" | "F+", ___}]
+      || SpinorObjIsPsiQ[singleOp];
+  (*D...F*)
+  flag1 = 0;
+  tempList = {};
+  Do[
+    If[flag1 == 0 && SpinorObjIsDQ@op,
+      flag1 = 1;
+      tempList ~ AppendTo ~ {"braDL"};
+    ];
+    tempList ~ AppendTo ~ op;
+    If[flag1 != 0 && SpinorObjIsFieldQ@op,
+      flag1 = 0;
+      tempList ~ AppendTo ~ {"braR"};
+    ];
+    , {op, spinorOpList}];
+  resultList = tempList;
+
+  (*\[Psi]...\[Psi]*)
+  flag1 = 0;
+  tempList = {};
+  Do[
+    If[flag1 == 0 && SpinorObjIsPsiQ@op,
+      flag1 = 1;
+      tempList ~ AppendTo ~ {"braPL"};
+      tempList ~ AppendTo ~ op;
+      Continue[];
+    ];
+    tempList ~ AppendTo ~ op;
+    If[flag1 != 0 && SpinorObjIsPsiQ@op,
+      flag1 = 0;
+      tempList ~ AppendTo ~ {"braR"};
+    ];
+    , {op, resultList}];
+  resultList = tempList;
+  (*Rearrange cross braDL,braPL*)
+  flag1 = 0;
+  flag2 = 0;
+  tempList = {};
+  Do[
+    op = resultList[[i]];
+    If[flag1 == 0 && op === {"braDL"},
+      flag1 = 1; flag2 = 1 + Length@tempList;
+    ];
+    If[flag1 == 1 && op === {"braR"},
+      flag1 = 0;
+    ];
+    If[flag1 == 1 && op === {"braPL"},
+      tempList = Insert[tempList, {"braL"}, flag2];
+      Continue[];
+    ];
+    tempList ~ AppendTo ~ op
+    , {i, Length@resultList}];
+  resultList = tempList /. {{"braDL"} -> {"braL"}, {"braPL"} -> {"braL"}};
+  Return[resultList];
+];
+
 Options[ExportWelyOp2Tex] = Options[ExportSpinorObj2Tex];
 ExportWelyOp2Tex[weylop_Plus, opts : OptionsPattern[]] := (ExportSpinorObj2Tex[#, opts])& /@ Sum2List[weylop] //
     StringRiffle[#, "+"]&;
 ExportWelyOp2Tex[weylop_, opts : OptionsPattern[]] := ExportSpinorObj2Tex[#, opts]&@weylop;
 (*Example external-><|1->{"W^+","W^+"},2->{"W^-","W^-"},3->{"g","G"},4->{"A","F"},5->{"\\nu_e"},6->{"e"}|>*)
-Options[ExportSpinorObj2Tex] := {external -> "Default"};
-ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
-  innerRules, externalRules, FieldTranslationRule,
+Options[ExportSpinorObj2Tex] := {external -> "Default", addbra -> True};
+ExportSpinorObj2Tex[spinorOpListParm_, OptionsPattern[]] := Module[{
+  spinorOpList, innerRules, externalRules, FieldTranslationRule,
   opList, dic, curObj, outList, trList
 },
+  spinorOpList = If[OptionValue@addbra, AddBrasToSpinorObjList[spinorOpListParm], spinorOpListParm];
   innerRules = {
+    {"braL"} -> "\\left(",
+    {"braR"} -> "\\right)",
     {"D", n_, i_} :> "D_{" <> Index2Greek[i] <> "}",
     {"\[Sigma]", LI_, S1_, S2_} :> "\\sigma^{" <> Index2Greek[LI] <> "}",
     {"\[Sigma]Bar", LI_, S1_, S2_} :> "\\bar{\\sigma}^{" <> Index2Greek[LI] <> "}",
@@ -109,14 +173,14 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
   If[OptionValue@external === "Default",
     externalRules = {
       {"\[Phi]", i_} :> "\\phi_" <> ToString[i],
-      {n_Integer, 1 / 2, i_} :> "\\psi^R_" <> ToString[n],
-      {n_Integer, -(1 / 2), i_} :> "\\psi^L_" <> ToString[n],
+      {n_Integer, 1 / 2, i_} :> "\\psi_{R" <> ToString[n] <> "}",
+      {n_Integer, -(1 / 2), i_} :> "\\psi_{L" <> ToString[n] <> "}",
       {"A", n_, i_} :> "A_{" <> ToString[n] <> " " <> Index2Greek[i] <> "}",
       {"F+", n_, i_, j_} :> "{F}^{+}_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
       {"F-", n_, i_, j_} :> "{F}^{-}_{" <> ToString[n] <> " " <> Index2Greek[i] <> " " <> Index2Greek[j] <> "}",
       (*with color index*)
-      {n_Integer, 1 / 2, i_, j_} :> "{\\psi_R}_" <> ToString[n] <> "^{" <> Index2Latin[j] <> "}",
-      {n_Integer, -(1 / 2), i_, j_} :> "{\\psi_L}" <> ToString[n] <> "^{" <> Index2Latin[j] <> "}" ,
+      {n_Integer, 1 / 2, i_, j_} :> "\\psi_{R" <> ToString[n] <> "}" <> "^{" <> Index2Latin[j] <> "}",
+      {n_Integer, -(1 / 2), i_, j_} :> "\\psi_{L" <> ToString[n] <> "}" <> "^{" <> Index2Latin[j] <> "}" ,
       {n_Integer, 1 / 2 I, i_, j_} :> "\\bar{\\psi}_{R" <> ToString[n] <> " " <> Index2Latin[j] <> "}",
       {n_Integer, -(1 / 2) I, i_, j_} :> "\\bar{\\psi}_{L" <> ToString[n] <> " " <> Index2Latin[j] <> "}" ,
 
@@ -140,8 +204,8 @@ ExportSpinorObj2Tex[SpinorOpList_, OptionsPattern[]] := Module[{
   ];
   dic = Join[innerRules, externalRules];
   outList = {};
-  curObj = SpinorOpList[[1]];
-  opList = Drop[SpinorOpList, 1];
+  curObj = spinorOpList[[1]];
+  opList = Drop[spinorOpList, 1];
   If[(curObj // Head // ToString) != "List", (*only simplefied color term does not have list as head*)
     AppendTo[outList, "(" <> ((curObj //. dic) // ToString) <> ")"];
     curObj = opList[[1]];
