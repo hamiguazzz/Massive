@@ -12,10 +12,17 @@
 (* Control model *)
 $currentModel = <||>;
 SetSharedVariable[$currentModel];
-modelPropertiesNames = {"spin", "field name", "field strength name", "mass", "color"};
+modelDefaultProperties = <|
+  "spin" -> 0,
+  "field name" -> "\\phi",
+  "field strength name" -> "",
+  "mass" -> 0,
+  "color" -> "",
+  "charge" -> 0
+|>;
 
 ImportModel[fileName_String] := Module[{
-  particlesDict, CheckProperty, CheckSpin, CheckMass
+  particlesDict, CheckProperty, CheckSpin, CheckMass, CheckCharge
 },
   particlesDict = Association /@ Association@Import[fileName];
   CheckSpin[spinIn_] := Switch[spinIn,
@@ -28,11 +35,18 @@ ImportModel[fileName_String] := Module[{
     0 | "0", 0,
     _, "m" <> ToString@massIn
   ];
+  CheckCharge[chargeIn_] := If[
+    NumberQ@ToExpression@ToString@chargeIn,
+    ToExpression@ToString@chargeIn,
+    Throw["No such charge"]
+  ];
   CheckProperty[associationInput_, propertyName_, checkFun_ : Null] :=
-      Module[{re = associationInput},
+      Module[{re = associationInput, temp},
         Do[
           If[!KeyExistsQ[re[k], propertyName],
-            AssociateTo[re[k], propertyName -> ""];
+            temp = re[k];
+            AssociateTo[temp, (propertyName -> modelDefaultProperties[propertyName])];
+            re[k] = temp;
           ];
           If[checkFun =!= Null,
             re[k][propertyName] = checkFun[re[k][propertyName]];];
@@ -40,9 +54,10 @@ ImportModel[fileName_String] := Module[{
         ];
         Return[re]
       ];
-  particlesDict = Fold[CheckProperty, particlesDict, modelPropertiesNames];
+  particlesDict = Fold[CheckProperty, particlesDict, modelDefaultProperties // Keys];
   particlesDict = CheckProperty[particlesDict, "mass", CheckMass];
   particlesDict = CheckProperty[particlesDict, "spin", CheckSpin];
+  particlesDict = CheckProperty[particlesDict, "charge", CheckCharge];
   $currentModel = particlesDict;
   Return[$currentModel];
 ];
@@ -51,8 +66,8 @@ ImportModel[fileName_String] := Module[{
 (*Control basis construction*)
 
 ClearSavedConstructBasis[] := (ClearAll[SavedConstructBasis]; InitialSavedConstructBasis[];);
-InitialSavedConstructBasis[] := (SavedConstructBasis[parameters___] :=
-    SavedConstructBasis[parameters] = ConstructBasis[parameters];)
+InitialSavedConstructBasis[] := SavedConstructBasis[parameters___] :=
+    SavedConstructBasis[parameters] = ConstructBasis[parameters];
 InitialSavedConstructBasis[];
 
 (*output mode: "amplitude", "operator", "feyncalc", "tex" *)
@@ -71,7 +86,8 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
   If[
     OddQ[2 * Plus @@ spins]
         || 0 == Length@Select[masses, # =!= 0&]
-        || 0 != Mod[Total[colors /. {"" -> 0, "q" -> 1, "aq" -> 2, "g" -> 3}], 3],
+        || 0 != Mod[Total[colors /. {"" -> 0, "q" -> 1, "aq" -> 2, "g" -> 3}], 3]
+        || 0 != Total[$currentModel[#]["charge"]& /@ particles],
     Print["particles combination are illegal!"];
     Return[];
   ];
@@ -85,8 +101,8 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
       ]
     , {i, Length@particles}];
 
-  LogPri["Spin:", spins, "\n","Mass:", masses, "\n","Color:", colors, "\n",
-    "Identical:", identicalList, "\n","Field:", externalDict];
+  LogPri["Spin:", spins, "\n", "Mass:", masses, "\n", "Color:", colors, "\n",
+    "Identical:", identicalList, "\n", "Field:", externalDict];
   Do[
     currentBasis = Null;
     Catch[currentBasis = SavedConstructBasis[spins, dim, mass -> masses];];
@@ -128,12 +144,12 @@ OrganizeStringAssociation[texDict_?AssociationQ,
     result = OptionValue@heading <> OptionValue@delimiter,
     fun = OptionValue@sectionfun
   },
-  result = result <> StringJoin@@((
+  result = result <> StringJoin @@ ((
     fun@# <> endLine
         <> "$$" <> endLine
         <> ToString@texDict[#]
         <> "$$" <> endLine
-  )&/@keys);
+  )& /@ keys);
   If[OptionValue@exportPath =!= "",
     Export[OptionValue@exportPath, result] // Return;
   ];

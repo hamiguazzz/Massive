@@ -2,79 +2,182 @@
   "h": {
     "spin": 0,
     "field name": "h",
-    "field strength name": "",
-    "mass": 0,
-    "color": ""
+    "mass": 1
+  },
+  "e-": {
+    "spin": 0.5,
+    "field name": "e",
+    "mass": 1,
+    "charge": "-1"
+  },
+  "e+": {
+    "spin": 0.5,
+    "field name": "\\bar{e}",
+    "mass": 1,
+    "charge": "+1"
+  },
+  "mu-": {
+    "spin": 0.5,
+    "field name": "\\mu",
+    "mass": 1,
+    "charge": "-1"
+  },
+  "mu+": {
+    "spin": 0.5,
+    "field name": "\\bar{\\mu}",
+    "mass": 1,
+    "charge": "+1"
+  },
+  "tao-": {
+    "spin": 0.5,
+    "field name": "\\tau",
+    "mass": 1,
+    "charge": "-1"
+  },
+  "tao+": {
+    "spin": 0.5,
+    "field name": "\\bar{\\tau}",
+    "mass": 1,
+    "charge": "+1"
   },
   "ve": {
     "spin": 0.5,
     "field name": "\\nu_e",
-    "field strength name": "",
-    "mass": 1,
-    "color": ""
+    "mass": 1
+  },
+  "vebar": {
+    "spin": 0.5,
+    "field name": "\\bar{\\nu_e}",
+    "mass": 1
   },
   "vmu": {
     "spin": 0.5,
     "field name": "\\nu_\\mu",
-    "field strength name": "",
-    "mass": 1,
-    "color": ""
+    "mass": 1
+  },
+  "vmubar": {
+    "spin": 0.5,
+    "field name": "\\bar{\\nu_\\mu}",
+    "mass": 1
+  },
+  "vtau": {
+    "spin": 0.5,
+    "field name": "\\nu_\\mu",
+    "mass": 1
+  },
+  "vtaubar": {
+    "spin": 0.5,
+    "field name": "\\bar{\\nu_\\tau}",
+    "mass": 1
   },
   "u": {
     "spin": 0.5,
     "field name": "u",
-    "field strength name": "",
     "mass": 1,
-    "color": "q"
+    "color": "q",
+    "charge": "2/3"
   },
   "ubar": {
     "spin": 0.5,
     "field name": "\\bar{u}",
-    "field strength name": "",
     "mass": 1,
-    "color": "aq"
+    "color": "aq",
+    "charge": "-2/3"
   },
   "d": {
     "spin": 0.5,
     "field name": "d",
-    "field strength name": "",
     "mass": 1,
-    "color": "q"
+    "color": "q",
+    "charge": "-1/3"
   },
   "dbar": {
     "spin": 0.5,
     "field name": "\\bar{d}",
-    "field strength name": "",
     "mass": 1,
-    "color": "aq"
+    "color": "aq",
+    "charge": "1/3"
+  },
+  "c": {
+    "spin": 0.5,
+    "field name": "c",
+    "mass": 1,
+    "color": "q",
+    "charge": "2/3"
+  },
+  "cbar": {
+    "spin": 0.5,
+    "field name": "\\bar{c}",
+    "mass": 1,
+    "color": "aq",
+    "charge": "-2/3"
+  },
+  "s": {
+    "spin": 0.5,
+    "field name": "s",
+    "mass": 1,
+    "color": "q",
+    "charge": "-1/3"
+  },
+  "sbar": {
+    "spin": 0.5,
+    "field name": "\\bar{s}",
+    "mass": 1,
+    "color": "aq",
+    "charge": "1/3"
+  },
+  "t": {
+    "spin": 0.5,
+    "field name": "t",
+    "mass": 1,
+    "color": "q",
+    "charge": "2/3"
+  },
+  "tbar": {
+    "spin": 0.5,
+    "field name": "\\bar{t}",
+    "mass": 1,
+    "color": "aq",
+    "charge": "-2/3"
+  },
+  "b": {
+    "spin": 0.5,
+    "field name": "b",
+    "mass": 1,
+    "color": "q",
+    "charge": "-1/3"
+  },
+  "bbar": {
+    "spin": 0.5,
+    "field name": "\\bar{b}",
+    "mass": 1,
+    "color": "aq",
+    "charge": "1/3"
   },
   "gamma": {
     "spin": 1,
     "field name": "A",
-    "field strength name": "{F}",
-    "mass": 0,
-    "color": ""
+    "field strength name": "{F}"
   },
   "W+": {
     "spin": 1,
     "field name": "{(W^+)}",
     "field strength name": "{(W^+)}",
     "mass": 1,
-    "color": ""
+    "charge": "+1"
   },
   "W-": {
     "spin": 1,
     "field name": "{(W^-)}",
     "field strength name": "{(W^-)}",
     "mass": 1,
-    "color": ""
+    "charge": "-1"
   },
   "Z": {
     "spin": 1,
     "field name": "Z",
     "field strength name": "Z",
-    "mass": 1,
-    "color": ""
+    "mass": 1
   },
   "g": {
     "spin": 1,
