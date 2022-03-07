@@ -7,7 +7,7 @@ MassOption[masses_List, np_] :=
       masses ~ Join ~ ConstantArray[0, np - Length@masses],
       masses[[1 ;; np]]
     ];
-MassOption[massiveParticles_List, np_] /; IntegerQ[massiveParticles[[1]]] := Table[
+MassOption[massiveParticles_List, np_] /; And @@ ((IntegerQ@# && # >= 1 && # <= np)& /@ massiveParticles) := Table[
   If[!MemberQ[massiveParticles, i], 0, "\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)"],
   {i, np}];
 MassOption[All, np_] := Table["\!\(\*SubscriptBox[\(m\), \(" <> ToString@i <> "\)]\)", {i, np}];
@@ -254,8 +254,8 @@ ReduceSt[amp_, np_Integer, OptionsPattern[]] :=
 (* ::Section:: *)
 (*coefficient matrix*)
 
-FindCor[amp_, ampDbasis_] := FindCoordinate[amp, ampDbasis, !(MatchQ[#, _ab | _sb]) &];
-FindCor[ampDbasis_] := FindCoordinate[#, ampDbasis, !(MatchQ[#, _ab | _sb]) &]&;
+FindCor[amp_, ampDbasis_] := Coefficient[amp, #] & /@ ampDbasis;
+FindCor[ampDbasis_] := FindCor[#, ampDbasis]&;
 
 (* ::Section:: *)
 (*obtain d-dim basis*)

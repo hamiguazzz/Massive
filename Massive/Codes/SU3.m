@@ -127,19 +127,7 @@ YTSU3RepeatedShortenId[expr_Times, {column1_Integer, column2_Integer}, h_ : defa
 
 FindColorCor[warpedTableaux_List, warpedBasis_List] := FindColorCor[#, warpedBasis]& /@ warpedTableaux;
 FindColorCor[warpedBasis_List] := FindColorCor[#, warpedBasis]&;
-FindColorCor[warpedTableaux_, warpedBasis_List] := Module[
-  {temp, factors, exprs, poss, vec},
-  temp = Prod2List /@ Sum2List@ warpedTableaux;
-  {factors, exprs} = If[Length@# == 1, {1} ~ Join ~ #, #]& /@ temp // Transpose;
-  poss = Flatten@(FirstPosition[warpedBasis, #, {-1}]& /@ exprs);
-  If[Length@Select[poss, Negative[#]&] != 0, Print["not found: ", warpedTableaux];Return[Null]];
-  vec = ConstantArray[0, Length@warpedBasis];
-  Table[
-    vec[[poss[[i]]]] = factors[[i]];,
-    {i, Length@poss}
-  ];
-  Return[vec];
-];
+FindColorCor[warpedTableaux_, warpedBasis_List] := Coefficient[warpedTableaux, #] & /@ warpedBasis;
 
 (* ::Section:: *)
 (*Step4 Get Color Operators*)
@@ -355,6 +343,7 @@ AuxConstructIdenticalColorBasis[su3ShapeList_, identicalParm_, h_, OptionsPatter
     colorInnerOpDict = GetColorInnerPermutedOperatorDict[colorIndDict, ruleInnerCoorsDict[#]&];
     projectionOp = GetProjectInnerColorOp[colorIndDict, colorInnerOpDict];
     independentPosListX = FindIndependentBasisPos[projectionOp];
+    If[Length@independentPosListX == 0, Return@{colorIndDict,{}, <||>}];
     proL = projectionOp[[independentPosListX]];
     proR = Transpose @ proL;
     metricInvG = Inverse[proL.proR];

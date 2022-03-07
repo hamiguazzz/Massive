@@ -241,7 +241,7 @@ Options[ExportTexList2Array] = {
   prefix -> "\t",
   suffix -> "\\\\\n"
 };
-ExportTexList2Array[{}, OptionsPattern[]] := "\text{None}\n";
+ExportTexList2Array[{}, OptionsPattern[]] := "\\text{None}\n";
 ExportTexList2Array[l_List, OptionsPattern[]] /; StringQ[l[[1]]] :=
     With[{},
       If[Length@l == 1,

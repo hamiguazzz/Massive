@@ -104,9 +104,9 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
   LogPri["Spin:", spins, "\n", "Mass:", masses, "\n", "Color:", colors, "\n",
     "Identical:", identicalList, "\n", "Field:", externalDict];
   Do[
-    currentBasis = Null;
+    currentBasis = {};
     Catch[currentBasis = SavedConstructBasis[spins, dim, mass -> masses];];
-    If[currentBasis == Null, Continue[];];
+    If[currentBasis == {}, Continue[];];
     If[0 == Length@Select[colors, # =!= ""&],
       currentResult = ConstructIndependentBasis[currentBasis, identicalList, mass -> masses];
       resultDict[dim] = Switch[ToLowerCase@OptionValue@output,
@@ -130,7 +130,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
     ];
     , {dim, fromOpDim, toOpDim}
   ];
-  Return[resultDict];
+  Return[resultDict /. Null -> {}];
 ];
 
 Options[OrganizeStringAssociation] = {
@@ -151,6 +151,9 @@ OrganizeStringAssociation[texDict_?AssociationQ,
         <> "$$" <> endLine
   )& /@ keys);
   If[OptionValue@exportPath =!= "",
+    If[!FileExistsQ[OptionValue@exportPath],
+      CreateFile[OptionValue@exportPath];
+    ];
     Export[OptionValue@exportPath, result] // Return;
   ];
   Return[result];
