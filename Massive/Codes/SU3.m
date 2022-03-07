@@ -186,7 +186,7 @@ GetProjectInnerColorOp[colorIndDict_Association, operatorDict_Association] := Mo
     poly = GetPermutedPolyFromYT[yt] // First;
     AssociateTo[polyDict, particle -> poly];
     , {particle, Keys@operatorDict}];
-  Dot @@ ParallelTable[polyDict[p] /. operatorDict[p], {p, Keys@polyDict}] // Return;
+  Dot @@ Table[polyDict[p] /. operatorDict[p], {p, Keys@polyDict}] // Return;
 ];
 
 
@@ -253,7 +253,7 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
     coloredCfBasis[[
         Intersection[physicalBasisIndex,
           (Transpose@List@Range@Length@colorBasis).
-              List@FindIndependentBasisPos[N@cfBasisCoordinates] // Flatten]
+              List@FindIndependentBasisPos[cfBasisCoordinates] // Flatten]
         ]] // Return;
   ];
 

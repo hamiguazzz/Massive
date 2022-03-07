@@ -74,20 +74,26 @@ InitialSavedConstructBasis[];
 (*TODO deliver options*)
 Options[BasisByModel] := {output -> "tex"};
 BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Module[
-  {particles, np, spins, masses, colors, identicalList, externalDict, currentBasis, currentResult, resultDict},
+  {particles, massivePos, masslessPos, np, spins, masses, colors, charges, identicalList,
+    externalDict, currentBasis, currentResult, resultDict},
   particles = Sort[particlesParm];
   If[Length@particles < 4 || Or @@ (!KeyExistsQ[$currentModel, #]& /@ particles),
     Print["particles are illegal!"];
     Return[];
   ];
   resultDict = Table[dim -> Null, {dim, fromOpDim, toOpDim}] // Association;
+  masses = $currentModel[#]["mass"]& /@ particles;
+  masslessPos = Flatten@Position[masses, _?(# === 0&), 1];
+  massivePos = Complement[Range@Length@particles, masslessPos];
+  particles = particles[[massivePos ~ Join ~ masslessPos]];
   spins = $currentModel[#]["spin"]& /@ particles;
   masses = $currentModel[#]["mass"]& /@ particles;
+  charges = $currentModel[#]["charge"]& /@ particles;
+  If[Length@massivePos == 0, Print["at least one particle massive!"]; Return[];];
   If[
     OddQ[2 * Plus @@ spins]
-        || 0 == Length@Select[masses, # =!= 0&]
         || 0 != Mod[Total[colors /. {"" -> 0, "q" -> 1, "aq" -> 2, "g" -> 3}], 3]
-        || 0 != Total[$currentModel[#]["charge"]& /@ particles],
+        || 0 != Total[charges],
     Print["particles combination are illegal!"];
     Return[];
   ];

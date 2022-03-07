@@ -254,8 +254,8 @@ ReduceSt[amp_, np_Integer, OptionsPattern[]] :=
 (* ::Section:: *)
 (*coefficient matrix*)
 
-FindCor[amp_, ampDbasis_] := Coefficient[amp, #] & /@ ampDbasis;
-FindCor[ampDbasis_] := FindCor[#, ampDbasis]&;
+FindCor[amp_, ampDbasis_] := FindCoordinate[amp, ampDbasis, !(MatchQ[#, _ab | _sb]) &];
+FindCor[ampDbasis_] := FindCoordinate[#, ampDbasis, !(MatchQ[#, _ab | _sb]) &]&;
 
 (* ::Section:: *)
 (*obtain d-dim basis*)
