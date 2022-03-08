@@ -246,7 +246,7 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
 
   (*Expand basis*)
   coloredCfBasis = Table[{color, amp}, {color, colorBasis}, {amp, independentCfBasis}] // Flatten[#, 1]&;
-  physicalBasisIndex = Flatten @ Table[physicalBasisIndex * i, {i, Length@colorBasis}];
+  physicalBasisIndex = Flatten @ Table[physicalBasisIndex + (i - 1) * Length@independentCfBasis, {i, Length@colorBasis}];
 
   (*no identical*)
   If[identicalList === {},
@@ -273,7 +273,7 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
     , " calc cost ", #[[1]]]];#[[2]])& // SparseArray;
   (
     colorOps = Table[
-      If[KeyExistsQ[colorIdenticalOpDict,id],
+      If[KeyExistsQ[colorIdenticalOpDict, id],
         permuteIdenticalPolyDict[id] /. colorIdenticalOpDict[id],
         IdentityMatrix[Length@colorBasis]
       ],
@@ -343,7 +343,7 @@ AuxConstructIdenticalColorBasis[su3ShapeList_, identicalParm_, h_, OptionsPatter
     colorInnerOpDict = GetColorInnerPermutedOperatorDict[colorIndDict, ruleInnerCoorsDict[#]&];
     projectionOp = GetProjectInnerColorOp[colorIndDict, colorInnerOpDict];
     independentPosListX = FindIndependentBasisPos[projectionOp];
-    If[Length@independentPosListX == 0, Return@{colorIndDict,{}, <||>}];
+    If[Length@independentPosListX == 0, Return@{colorIndDict, {}, <||>}];
     proL = projectionOp[[independentPosListX]];
     proR = Transpose @ proL;
     metricInvG = Inverse[proL.proR];
