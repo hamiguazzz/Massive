@@ -719,7 +719,7 @@ EpsilonListSimplify[opList_List] := Module[
     {"\[Epsilon]", i_, j_, k_} :> EpsColor[i, j, k],
     {"\[Epsilon]i", i_, j_, k_} :> EpsColor[i, j, k]};
   epsExpr = Times @@ epsExprList // ColorOpReduce;
-  epsList = List @@ epsExpr;
+  epsList = Prod2List @ epsExpr;
   deltaList = Select[epsList, (Head@# === DeltaColor) &];
   epsList = Complement[epsList, deltaList];
   deltaReplaceList = deltaList /. (DeltaColor[i_, j_] :> (i -> j));
