@@ -51,7 +51,7 @@ FindPsiChain[amp_, np_Integer, OptionsPattern[]] := Module[
   {spins, antispinors} = Amp2MetaInfo[amp, np, mass -> OptionValue@mass];
   bras = BreakBracket /@ bras;
   If[Length@bras < 2,
-    Return[{factor, Append[bras[[1]], bras[[1]][[1]]], {1}}];
+    Return[{factor, {Append[bras[[1]], bras[[1]][[1]]]}, {1}}];
   ];
   FactorMatchQ[bra_, matchrule_] :=
       If[ MatchQ[bra, matchrule],

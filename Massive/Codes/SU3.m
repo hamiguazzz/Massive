@@ -173,6 +173,7 @@ GetColorInnerPermutedOperatorDict[colorIndDict_Association, genCoorsByRule_] :=
       Return[operatorDict];
     ];
 
+GetProjectInnerColorOp[colorIndDict_Association, <||>] := {{1}};
 GetProjectInnerColorOp[colorIndDict_Association, operatorDict_Association] := Module[
   {polyDict, yt, poly},
   polyDict = <||>;
