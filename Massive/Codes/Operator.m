@@ -214,6 +214,9 @@ ConstructOpInSpinIndex[amp_, np_Integer, spins_List, OptionsPattern[]] :=
       psiChain = FindPsiChain[amp, np, mass -> OptionValue@mass];
       (*Print["psiChian Found: ",psiChain];*)
       chains = psiChain[[2]];
+      If[(chains[[1]]//Head//ToString)!="List",
+        chains=List[chains];
+      ];
       findPtclSpin[ptcl_] :=
           If[MemberQ[Range[np + 1, 2 * np], ptcl], spins[[-ptcl + 2 * np + 1]],
             spins[[ptcl]]];
