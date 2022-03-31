@@ -120,7 +120,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
         "operator" | "op", Amp2WeylOp[np, mass -> masses] /@ currentResult,
         (*TODO feyncalc*)
         "tex" | "latex", ExportSpinorObj2Tex[#, external -> externalDict] & /@
-            Amp2WeylOp[np, mass -> masses] /@ currentResult // ExportTexList2Array,
+            Amp2WeylOp[np, mass -> masses] /@ currentResult,
         _, Null
       ];
       ,
@@ -130,7 +130,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
         "operator" | "op", Amp2WeylOp[np, colorType -> colors, mass -> masses] /@ currentResult,
         (*TODO feyncalc*)
         "tex" | "latex", ExportSpinorObj2Tex[#, external -> externalDict] & /@
-            Amp2WeylOp[np, colorType -> colors, mass -> masses] /@ currentResult // ExportTexList2Array,
+            Amp2WeylOp[np, colorType -> colors, mass -> masses] /@ currentResult,
         _, Null
       ];
     ];
@@ -139,23 +139,28 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
   Return[resultDict /. Null -> {}];
 ];
 
-Options[OrganizeStringAssociation] = {
-  sectionfun -> (StringJoin["\\subsection{ Dimension = ", ToString@#, "}"]&),
-  heading -> "", exportPath -> "", delimiter -> "\n"};
-OrganizeStringAssociation[texDict_?AssociationQ,
-  OptionsPattern[]] := Module[
+Options[OrganizeResultTexDict] := {heading -> "", delimiter -> "\n", exportPath -> ""};
+OrganizeResultTexDict[texDict_?AssociationQ, OptionsPattern[]] := Module[
   {
+    EquLine, DimHeadLine,
     keys = texDict // Keys // Sort,
     endLine = OptionValue@delimiter,
-    result = OptionValue@heading <> OptionValue@delimiter,
-    fun = OptionValue@sectionfun
+    result
   },
-  result = result <> StringJoin @@ ((
-    fun@# <> endLine
-        <> "$$" <> endLine
-        <> ToString@texDict[#]
-        <> "$$" <> endLine
-  )& /@ keys);
+  EquLine[key_] := If[
+    Length@texDict[key] > 0 && texDict[key][[1]] =!= "",
+    ("$$" <> endLine <> ToString@# <> endLine <> "$$" <> endLine <> endLine)& /@ texDict[key] // StringJoin,
+    ""
+  ];
+  DimHeadLine[key_] := If[
+    Length@texDict[key] > 0 && texDict[key][[1]] =!= "",
+    StringJoin["\\subsection{Dimension ", ToString@key, " , ",
+      "$\\mathcal{O}_{", ToString@key, "}^{",
+      If[Length@texDict[key] > 1, "1\\sim " <> ToString@Length@texDict[key], "1"]
+      , "}$}", endLine],
+    ""
+  ];
+  result = OptionValue@heading <> StringJoin[(DimHeadLine[#] <> EquLine[#])& /@ keys];
   If[OptionValue@exportPath =!= "",
     If[!FileExistsQ[OptionValue@exportPath],
       CreateFile[OptionValue@exportPath];
