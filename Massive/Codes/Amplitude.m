@@ -78,35 +78,135 @@ InnerConstructAmp[spins_, antispinors_, np_, ampDim_, masses_] :=
 (*Massless limit reduce rules*)
 (*In fact reduce faster by omitting these lower dimensions*)
 
-FruleP1MLL[np_] := {
-  sb[1, i_] * ab[1, j_] -> Sum[-sb[k, i] * ab[k, j], {k, 2, np}],
-  sb[1, i_]^m_ * ab[1, j_] -> Sum[-sb[1, i]^(m - 1) * sb[k, i] * ab[k, j], {k, 2, np}],
-  sb[1, i_] * ab[1, j_]^n_ -> Sum[-ab[1, j]^(n - 1) * sb[k, i] * ab[k, j], {k, 2, np}],
-  sb[1, i_]^m_ * ab[1, j_]^n_ -> Sum[-sb[1, i]^(m - 1) * ab[1, j]^(n - 1) * sb[k, i] * ab[k, j], {k, 2, np}]};
-FruleP3MLL[np_] := {
-  sb[2, 3] * ab[2, 3] -> -1 / 2 * (Sum[sb[i, j] * ab[i, j], {i, 2, 3}, {j, 4, np}]
-      + Sum[sb[i, j] * ab[i, j], {i, 4, np}, {j, i + 1, np}]),
-  sb[2, 3]^m_ * ab[2, 3] -> -1 / 2 * sb[2, 3]^(m - 1) * (Sum[sb[i, j] * ab[i, j], {i, 2, 3}, {j, 4, np}]
-      + Sum[sb[i, j] * ab[i, j], {i, 4, np}, {j, i + 1, np}]),
-  sb[2, 3] * ab[2, 3]^n_ -> -1 / 2 * ab[2, 3]^(n - 1) * (Sum[sb[i, j] * ab[i, j], {i, 2, 3}, {j, 4, np}]
-      + Sum[sb[i, j] * ab[i, j], {i, 4, np}, {j, i + 1, np}]),
-  sb[2, 3]^m_ * ab[2, 3]^n_ -> -1 / 2 * sb[2, 3]^(m - 1) ab[2, 3]^(n - 1) * (Sum[sb[i, j] * ab[i, j], {i, 2, 3}, {j, 4, np}]
-      + Sum[sb[i, j] * ab[i, j], {i, 4, np}, {j, i + 1, np}])
-};
+(*FruleP1MLL[np_] := {*)
+(*  sb[1, i_] * ab[1, j_] -> Sum[-sb[k, i] * ab[k, j], {k, 2, np}],*)
+(*  sb[1, i_]^m_ * ab[1, j_] -> Sum[-sb[1, i]^(m - 1) * sb[k, i] * ab[k, j], {k, 2, np}],*)
+(*  sb[1, i_] * ab[1, j_]^n_ -> Sum[-ab[1, j]^(n - 1) * sb[k, i] * ab[k, j], {k, 2, np}],*)
+(*  sb[1, i_]^m_ * ab[1, j_]^n_ -> Sum[-sb[1, i]^(m - 1) * ab[1, j]^(n - 1) * sb[k, i] * ab[k, j], {k, 2, np}]};*)
+(*FruleP3MLL[np_] := {*)
+(*  sb[2, 3] * ab[2, 3] -> -(Sum[sb[i, j] * ab[i, j], {i, 2, 3}, {j, 4, np}]*)
+(*      + Sum[sb[i, j] * ab[i, j], {i, 4, np - 1}, {j, i + 1, np}]),*)
+(*  sb[2, 3]^m_ * ab[2, 3] -> -sb[2, 3]^(m - 1)*)
+(*      * (Sum[sb[i, j] * ab[i, j], {i, 2, 3}, {j, 4, np}]*)
+(*      + Sum[sb[i, j] * ab[i, j], {i, 4, np - 1}, {j, i + 1, np}]),*)
+(*  sb[2, 3] * ab[2, 3]^n_ -> -ab[2, 3]^(n - 1)*)
+(*      * (Sum[sb[i, j] * ab[i, j], {i, 2, 3}, {j, 4, np}]*)
+(*      + Sum[sb[i, j] * ab[i, j], {i, 4, np - 1}, {j, i + 1, np}]),*)
+(*  sb[2, 3]^m_ * ab[2, 3]^n_ -> -sb[2, 3]^(m - 1) * ab[2, 3]^(n - 1)*)
+(*      * (Sum[sb[i, j] * ab[i, j], {i, 2, 3}, {j, 4, np}]*)
+(*      + Sum[sb[i, j] * ab[i, j], {i, 4, np - 1}, {j, i + 1, np}])*)
+(*};*)
 (*  sb[2, 3] * ab[2, 3] :> Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}],*)
 (*  sb[2, 3]^m_ * ab[2, 3] :> sb[2, 3]^(m - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}],*)
 (*  sb[2, 3] * ab[2, 3]^n_ :> ab[2, 3]^(n - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}],*)
 (*  sb[2, 3]^m_ * ab[2, 3]^n_ :> sb[2, 3]^(m - 1) ab[2, 3]^(n - 1) Sum[sb[i, j]ab[j, i], {i, 2, np}, {j, Max[i + 1, np], np}]};*)
-ruleSchAMLL = {
-  ab[i_, l_] * ab[j_, k_] /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0
-      :> -ab[i, j]ab[k, l] + ab[i, k]ab[j, l],
-  ab[i_, l_]^m_ * ab[j_, k_] /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0
-      :> ab[i, l]^(m - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l]),
-  ab[i_, l_] * ab[j_, k_]^n_ /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0
-      :> ab[j, k]^(n - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l]),
-  ab[i_, l_]^m_ * ab[j_, k_]^n_ /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0
-      :> ab[i, l]^(m - 1) ab[j, k]^(n - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l])};
-ruleSchSMLL = ruleSchAMLL /. ab -> sb;
+(*ruleSchAMLL = {*)
+(*  ab[i_, l_] * ab[j_, k_] /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0*)
+(*      :> -ab[i, j]ab[k, l] + ab[i, k]ab[j, l],*)
+(*  ab[i_, l_]^m_ * ab[j_, k_] /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0*)
+(*      :> ab[i, l]^(m - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l]),*)
+(*  ab[i_, l_] * ab[j_, k_]^n_ /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0*)
+(*      :> ab[j, k]^(n - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l]),*)
+(*  ab[i_, l_]^m_ * ab[j_, k_]^n_ /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0*)
+(*      :> ab[i, l]^(m - 1) ab[j, k]^(n - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l])};*)
+(*ruleSchSMLL = ruleSchAMLL /. ab -> sb;*)
+s[i_, j_] := ab[i, j] sb[j, i];
+ruleP1[Num_] := {sb[1, i_] ab[1, j_] :>
+    Sum[-sb[k, i] ab[k, j], {k, 2, Num}](*~Join~{-esb[i]ab[i,j],sb[
+   j,i]eab[j]}*),
+  sb[1, i_]^m_ ab[1, j_] :>
+      Sum[-sb[1, i]^(m - 1) sb[k, i] ab[k, j], {k, 2, Num}](*~
+   Join~{-sb[1,i]^(m-1)esb[i]ab[i,j],-sb[1,i]^(m-1)sb[j,i]eab[j]}*),
+  sb[1, i_] ab[1, j_]^n_ :>
+      Sum[-ab[1, j]^(n - 1) sb[k, i] ab[k, j], {k, 2, Num}](*~
+   Join~{-ab[1,j]^(n-1)esb[i]ab[i,j],-ab[1,j]^(n-1)sb[j,i]eab[j]}*),
+  sb[1, i_]^m_ ab[1, j_]^n_ :>
+      Sum[-sb[1, i]^(m - 1) ab[1, j]^(n - 1) sb[k, i] ab[k, j], {k, 2,
+        Num}](*~Join~{-sb[1,i]^(m-1) ab[1,j]^(n-1)esb[i]ab[i,j],-sb[1,
+   i]^(m-1) ab[1,j]^(n-1)sb[j,i]eab[j]}*)};
+ruleP2[Num_] := {sb[1, 2] ab[2, i_ /; i > 2] :>
+    Sum[-sb[1, k] ab[k, i], {k, 3, Num}](*~Join~{-esb[1]ab[1,i],-sb[
+   1,i]eab[i]}*),
+  sb[1, 2]^m_ ab[2, i_ /; i > 2] :>
+      Sum[-sb[1, 2]^(m - 1) sb[1, k] ab[k, i], {k, 3, Num}](*~
+   Join~{-sb[1,2]^(m-1)esb[1]ab[1,i],-sb[1,2]^(m-1)sb[1,i]eab[i]}*),
+  sb[1, 2] ab[2, i_ /; i > 2]^n_ :>
+      Sum[-ab[2, i]^(n - 1) sb[1, k] ab[k, i], {k, 3, Num}](*~
+   Join~{-ab[2,i]^(n-1)esb[1]ab[1,i],-ab[2,i]^(n-1)sb[1,i]eab[i]}*),
+  sb[1, 2]^m_ ab[2, i_ /; i > 2]^n_ :>
+      Sum[-sb[1, 2]^(m - 1) ab[2, i]^(n - 1) sb[1, k] ab[k, i], {k, 3,
+        Num}](*~Join~{-sb[1,2]^(m-1) ab[2,i]^(n-1)esb[1]ab[1,i],-sb[1,
+   2]^(m-1) ab[2,i]^(n-1)sb[1,i]eab[i]}*),
+  sb[2, i_ /; i > 2] ab[1, 2] :>
+      Sum[-sb[k, i] ab[1, k], {k, 3, Num}](*~Join~{-esb[i]ab[1,i],-sb[
+   1,i]eab[1]}*),
+  sb[2, i_ /; i > 2]^m_ ab[1, 2] :>
+      Sum[-sb[2, i]^(m - 1) sb[k, i] ab[1, k], {k, 3, Num}](*~
+   Join~{-sb[2,i]^(m-1)esb[i]ab[1,i],-sb[2,i]^(m-1)sb[1,i]eab[1]}*),
+  sb[2, i_ /; i > 2] ab[1, 2]^n_ :>
+      Sum[-ab[1, 2]^(n - 1) sb[k, i] ab[1, k], {k, 3, Num}](*~
+   Join~{-ab[1,2]^(n-1)esb[i]ab[1,i],-ab[1,2]^(n-1)sb[1,i]eab[1]}*),
+  sb[2, i_ /; i > 2]^m_ ab[1, 2]^n_ :>
+      Sum[-sb[2, i]^(m - 1) ab[1, 2]^(n - 1) sb[k, i] ab[1, k], {k, 3,
+        Num}](*~Join~{-sb[2,i]^(m-1) ab[1,2]^(n-1)esb[i]ab[1,i],-sb[2,
+   i]^(m-1) ab[1,2]^(n-1)sb[1,i]eab[1]}*),
+  sb[1, 3] ab[2, 3] :> Sum[-sb[1, i] ab[2, i], {i, 4, Num}](*~
+   Join~{-esb[1]ab[2,1],-sb[1,2]eab[2]}*),
+  sb[1, 3]^m_ ab[2, 3] :>
+      Sum[-sb[1, 3]^(m - 1) sb[1, i] ab[2, i], {i, 4, Num}](*~
+   Join~{-sb[1,3]^(m-1)esb[1]ab[2,1],-sb[1,3]^(m-1)sb[1,2]eab[2]}*),
+  sb[1, 3] ab[2, 3]^n_ :>
+      Sum[-ab[2, 3]^(n - 1) sb[1, i] ab[2, i], {i, 4, Num}](*~
+   Join~{-ab[2,3]^(n-1)esb[1]ab[2,1],-ab[2,3]^(n-1)sb[1,2]eab[2]}*),
+  sb[1, 3]^m_ ab[2, 3]^n_ :>
+      Sum[-sb[1, 3]^(m - 1) ab[2, 3]^(n - 1) sb[1, i] ab[2, i], {i, 4,
+        Num}](*~Join~{-sb[1,3]^(m-1) ab[2,3]^(n-1)esb[1]ab[2,1],-sb[1,
+   3]^(m-1) ab[2,3]^(n-1)sb[1,2]eab[2]}*),
+  sb[2, 3] ab[1, 3] :> Sum[-sb[2, i] ab[1, i], {i, 4, Num}](*~
+   Join~{-esb[2]ab[1,2],-sb[2,1]eab[1]}*),
+  sb[2, 3]^m_ ab[1, 3] :>
+      Sum[-sb[2, 3]^(m - 1) sb[2, i] ab[1, i], {i, 4, Num}](*~
+   Join~{-sb[2,3]^(m-1)esb[2]ab[1,2],-sb[2,3]^(m-1)sb[2,1]eab[1]}*),
+  sb[2, 3] ab[1, 3]^n_ :>
+      Sum[-ab[1, 3]^(n - 1) sb[2, i] ab[1, i], {i, 4, Num}](*~
+   Join~{-ab[1,3]^(n-1)esb[2]ab[1,2],-ab[1,3]^(n-1)sb[2,1]eab[1]}*),
+  sb[2, 3]^m_ ab[1, 3]^n_ :>
+      Sum[-sb[2, 3]^(m - 1) ab[1, 3]^(n - 1) sb[2, i] ab[1, i], {i, 4,
+        Num}](*~Join~{-sb[2,3]^(m-1) ab[1,3]^(n-1)esb[2]ab[1,2],-sb[2,
+   3]^(m-1) ab[1,3]^(n-1)sb[2,1]eab[1]}*)
+};
+ruleP3[Num_] := {sb[2, 3] ab[2, 3] :>
+    Sum[s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}](*~
+   Join~{-2esb[1]eab[1]}~Join~Sum[esb[i]eab[i],{i,Num}]*),
+  sb[2, 3]^m_ ab[2, 3] :>
+      sb[2, 3]^(m - 1) Sum[
+        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}](*~Join~{-2sb[2,
+   3]^(m-1)esb[1]eab[1]}~Join~Sum[sb[2,3]^(m-1)esb[i]eab[i],{i,
+   Num}]*),
+  sb[2, 3] ab[2, 3]^n_ :>
+      ab[2, 3]^(n - 1) Sum[
+        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}](*~Join~{-2ab[2,
+   3]^(n-1)esb[1]eab[1]}~Join~Sum[ab[2,3]^(n-1)esb[i]eab[i],{i,
+   Num}]*),
+  sb[2, 3]^m_ ab[2, 3]^n_ :>
+      sb[2, 3]^(m - 1) ab[2, 3]^(n - 1) Sum[
+        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}](*~Join~{-2sb[2,
+   3]^(m-1) ab[2,3]^(n-1)esb[1]eab[1]}~Join~Sum[sb[2,3]^(m-1) ab[2,
+   3]^(n-1)esb[i]eab[i],{i,Num}]*)};
+ruleSchA = {ab[i_, l_] ab[j_, k_] /;
+    i < j < k < l :> (-ab[i, j] ab[k, l] + ab[i, k] ab[j, l]),
+  ab[i_, l_]^m_ ab[j_, k_] /; i < j < k < l :>
+      ab[i, l]^(m - 1) (-ab[i, j] ab[k, l] + ab[i, k] ab[j, l]),
+  ab[i_, l_] ab[j_, k_]^n_ /; i < j < k < l :>
+      ab[j, k]^(n - 1) (-ab[i, j] ab[k, l] + ab[i, k] ab[j, l]),
+  ab[i_, l_]^m_ ab[j_, k_]^n_ /; i < j < k < l :>
+      ab[i, l]^(m - 1) ab[j, k]^(n - 1) (-ab[i, j] ab[k, l] +
+          ab[i, k] ab[j, l])};
+ruleSchS = ruleSchA /. ab -> sb;
+ruleOmitLowDim[np_] = Table[sb[i, 2 * np - i + 1] -> 0, {i, 1, np}];
+rule[Num_] :=
+    Join[ruleP1[Num], ruleP2[Num], ruleP3[Num], ruleSchA, ruleSchS, ruleOmitLowDim[Num]];
+
 
 
 (* ::Section:: *)
@@ -152,7 +252,7 @@ MatchCFDim[amp_, np_, OptionsPattern[]] :=
 (* ::Subsection:: *)
 (*Reduce function*)
 
-ReduceRules[np_] := Join[FruleP1MLL[np], FruleP3MLL[np], ruleSchSMLL, ruleSchAMLL];
+ReduceRules[np_] := rule[np];
 
 SetAttributes[InnerReduceDictPart, HoldFirst];
 InnerReduceDictPart[dict_, amplst_, applyFun_] :=
