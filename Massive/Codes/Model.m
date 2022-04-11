@@ -67,7 +67,7 @@ ImportModel[fileName_String] := Module[{
 
 ClearSavedConstructBasis[] := (ClearAll[SavedConstructBasis]; InitialSavedConstructBasis[];);
 InitialSavedConstructBasis[] := SavedConstructBasis[parameters___] :=
-    SavedConstructBasis[parameters] = ConstructBasis[parameters];
+    SavedConstructBasis[parameters] = ConstructBareBasis[parameters];
 InitialSavedConstructBasis[];
 
 (*output mode: "amplitude", "operator", "feyncalc", "tex" *)

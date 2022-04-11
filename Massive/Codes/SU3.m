@@ -197,14 +197,14 @@ GetProjectInnerColorOp[colorIndDict_Association, operatorDict_Association] := Mo
 Options[ConstructIndependentColoredBasis] = Join[{
   ythead -> defaultYTHead,
   allowedmemory -> 4 * 10^9,
-  log -> False}, Options@ConstructBasis ,
+  log -> False}, Options@ConstructBareBasis ,
   Options@AuxConstructIdenticalColorBasis] // DeleteDuplicates;
 ConstructIndependentColoredBasis[spins_List, operDim_Integer,
   su3ShapeList_ : {},
   identicalParam_ : {},
   opts : OptionsPattern[]
 ] := ConstructIndependentColoredBasis[
-  ConstructBasis[spins, operDim, FilterRules[{opts}, Options@ConstructBasis]],
+  ConstructBareBasis[spins, operDim, FilterRules[{opts}, Options@ConstructBareBasis]],
   su3ShapeList, identicalParam, opts];
 ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Association},
   {},
@@ -216,22 +216,22 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
   identicalParam_ : {},
   opts : OptionsPattern[]
 ] := Module[
-  {np, spins, identicalList, physicalBasisIndex,
-    bhBasis, permutedBHs, coloredCfBasis, permutedBHCoorsDict, rulePermutedIdenticalCoorsDict,
-    rulesPermutedIdentical, lorIdenticalOpDict, permuteIdenticalPolyDict, totalOperator,
-    independentCfBasis, independentPermutedBasis, colorOps, totalColorFactor,
-    colorIndDict, colorBasis, colorIdenticalOpDict, lorentzOps},
+  {spins, identicalList,
+    colorIndDict, colorBasis, colorIdenticalOpDict,
+    phyOperatorDict, exprDict, GetIndependentBasisByTotalOp, GetTotalOperator,
+    GetColoredCfBasis, CombineOpDict, coloredPhyOperatorDict
+  },
 
   (*Basis info*)
   spins = data["metaInfo"]["spins"];
-  np = Length@spins;
-  bhBasis = data["bh"] // Values // Flatten;
-  independentCfBasis = data["basis"];
-  physicalBasisIndex = PositionOperatorPhysicalDim[data];
   If[identicalParam === {},
     identicalList = {},
     identicalList = (# ~ Append ~ If[OddQ[2 * spins[[#[[1]]]]], "A", "S"])& /@ identicalParam;
   ];
+
+  (*Calc Lorentz Permutation*)
+  phyOperatorDict = CalcPermutationMatrixDict[result, identicalList];
+  If[phyOperatorDict === {}, Return[{}]];
 
   (*Calc Color Permutation*)
   {colorIndDict, colorBasis, colorIdenticalOpDict} =
@@ -240,64 +240,41 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
 
   If[OptionValue@log, LogPri["involved color basis ", Length@ colorBasis];];
 
-  (*Self color cancel*)
+  (*Special: Self color cancel*)
   If[Length@colorBasis == 0,
     If[OptionValue@log, LogPri["Cancel color"];];
     Return[{}]];
 
   (*Expand basis*)
-  coloredCfBasis = Table[{color, amp}, {color, colorBasis}, {amp, independentCfBasis}] // Flatten[#, 1]&;
-  physicalBasisIndex = Flatten @ Table[physicalBasisIndex + (i - 1) * Length@independentCfBasis, {i, Length@colorBasis}];
+  GetColoredCfBasis[cfs_] := Table[{color, amp}, {color, colorBasis}, {amp, cfs}] // Flatten[#, 1]&;
 
-  (*no identical*)
+  (*Special: no identical*)
   If[identicalList === {},
-    coloredCfBasis[[
-        Intersection[physicalBasisIndex,
-          (Transpose@List@Range@Length@colorBasis).
-              List@FindIndependentBasisPos[cfBasisCoordinates] // Flatten]
-        ]] // Return;
+    Return[GetColoredCfBasis[phyOperatorDict[[1]][[1]]]];
   ];
 
-  (*Calc Lorentz Permutation*)
-  permuteIdenticalPolyDict = GetTotalPermutedPolyDict[identicalList];
-  rulesPermutedIdentical = GetMassiveIdenticalRules[#, np]& /@ identicalList // Flatten[#, 1]& // DeleteDuplicates;
-  permutedBHs = ParallelTable[ReplaceBraNumber[rule][b], {b, bhBasis}, {rule, rulesPermutedIdentical}] // Flatten;
-  permutedBHCoorsDict = ReduceToBH[permutedBHs, bhBasis, np]
-      // AbsoluteTiming // (If[OptionValue@log, LogPri["identical reduce cost ", #[[1]]]];#[[2]])&;
-  rulePermutedIdenticalCoorsDict = Table[rule -> (permutedBHCoorsDict[#]&) /@ ReplaceBraNumber[rule] /@ bhBasis, {rule, rulesPermutedIdentical}]
-      // Association;
-  lorIdenticalOpDict = GetIndependentPermutedOperatorDict[identicalList, np, rulePermutedIdenticalCoorsDict[#]&];
-  lorentzOps = (Table[cfBasisCoordinates.
-      (permuteIdenticalPolyDict[id] /. lorIdenticalOpDict[id]), {id, identicalList}])
-      // AbsoluteTiming // (If[OptionValue@log, LogPri["Lorentz matrix ",
-    {Length@(#[[2]][[1]]), Length@(#[[2]][[1]][[1]])}
-    , " calc cost ", #[[1]]]];#[[2]])& // SparseArray;
-  (
-    colorOps = Table[
-      If[KeyExistsQ[colorIdenticalOpDict, id],
-        permuteIdenticalPolyDict[id] /. colorIdenticalOpDict[id],
-        IdentityMatrix[Length@colorBasis]
-      ],
-      {id, identicalList}];
-    (*    totalColorFactor = Max@Abs@Eigenvalues@First@colorOps;*)
-    (*    colorOps = (# / totalColorFactor)& /@ colorOps;*)
-  ) // AbsoluteTiming // (If[OptionValue@log, LogPri["Color matrix ",
-    {Length@colorOps[[1]], Length@colorOps[[1]][[1]]}
-    , " calc cost ", #[[1]]]];)&;
+  (*Combine color and amp*)
+  exprDict = GetTotalPermutedPolyDict[identicalList];
+  CombineOpDict[cOpD_, lOpD_] := Block[{cOpDict = cOpD, ToIdentity, temp},
+    If[Length@cOpDict =!= Length@lOpD,
+      ToIdentity[rule_] := rule[[1]] -> IdentityMatrix[Length@colorBasis];
+      temp = (# -> ToIdentity /@ lOpD[#])&
+          /@ Complement[Keys@lOpD, Keys@cOpD];
+      AssociateTo[cOpDict, temp];
+    ];
+    MapThread[
+      Normal@MapThread[KroneckerProduct, {Association@#1 // KeySort, Association@#2 // KeySort}]&
+      , {cOpDict // KeySort, lOpD // KeySort}]
+  ];
+  CombineOpDict[lOpD_] := CombineOpDict[colorIdenticalOpDict, lOpD];
+  coloredPhyOperatorDict = {
+    GetColoredCfBasis[#[[1]]], CombineOpDict[#[[2]]]
+  }& /@ phyOperatorDict;
 
-  (MemoryConstrained[
-    totalOperator = Plus @@ MapThread[KroneckerProduct, {colorOps, lorentzOps}];
-    independentPermutedBasis = coloredCfBasis[[
-        Intersection[physicalBasisIndex, FindIndependentBasisPos[totalOperator]]
-        ]];,
-    OptionValue@allowedmemory,
-    (Print["Not enough memory"];Abort[];)
-  ]) // AbsoluteTiming // (If[OptionValue@log, LogPri["find independent basis cost ", #[[1]]]];#[[2]]) &;
-
-  If[OptionValue@log, LogPri["dimension of total permutation op is ",
-    {Length@totalOperator, Length@totalOperator[[1]]}];];
-
-  Return[independentPermutedBasis];
+  GetTotalOperator[opDict_] := Dot @@ Table[exprDict[id] /. opDict[id], {id, identicalList}];
+  GetIndependentBasisByTotalOp[{basis_, opDict_}] :=
+      basis[[#]]& /@ FindIndependentBasisPos[Transpose@GetTotalOperator[opDict]];
+  GetIndependentBasisByTotalOp /@ coloredPhyOperatorDict // Flatten[#, 1]& // Return;
 ];
 
 Options[AuxConstructIdenticalColorBasis] := {log -> False};

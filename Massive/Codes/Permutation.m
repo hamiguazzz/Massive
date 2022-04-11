@@ -310,36 +310,82 @@ ReplaceBraNumber[expr_, rules_] :=
       sb[l___] :> ReplaceBraNumber[sb[l], rules]};
 ReplaceBraNumber[expr_, {}] := expr;
 
+(*Result form : {relatedBasis,<|idType->{1->repMatrix, symFirst->..},...|> , ....}*)
+CalcPermutationMatrixDict[
+  result : {cfBasisCoordinates_List, data_Association}, identicalList_] :=
+    Module[{
+      np, spins, masses, cfs, physicalBasisIndexList,
+      bhs, pCFs, pCFCoorsDict, ruleCoorsDict,
+      rules, operatorDict,
+      rCFFakeDimDict, physicalPositionGroupedByFakeDimDict
+    },
+      (*prepare bare result*)
+      If[Length@cfBasisCoordinates === 0, Return[{}]];
+      spins = data["metaInfo"]["spins"];
+      masses = data["metaInfo"]["mass"];
+      np = Length@spins;
+      cfs = data["basis"];
+      bhs = data["bh"] // Values // Flatten;
+      physicalBasisIndexList = PositionOperatorPhysicalDim[data];
+      If[Length@physicalBasisIndexList == 0,
+        Return[{}];
+      ];
+      If[Length@identicalList == 0, Return[{{cfs[[#]]& /@ physicalBasisIndexList, <||>}}]];
 
-Options@ConstructIndependentBasis = {log -> False} ~ Join ~ Options@ConstructBasis // DeleteDuplicates;
+      (*Sort basis by fake dim*)
+      rCFFakeDimDict = Total[#, Infinity] & /@ ReverseDict[data["cf"]];
+      rCFFakeDimDict = Association@Table[amp -> rCFFakeDimDict[amp], {amp, cfs}];
+      indexByFakeDim = KeySort@PositionIndex[rCFFakeDimDict[#]& /@ cfs];
+      sortedIndex = Map[SortBy[
+        If[MemberQ[physicalBasisIndexList, #], Length@cfs + #, #]&
+      ], indexByFakeDim] // Values // Flatten;
+      cfs = cfs[[sortedIndex]];
+      physicalBasisIndexList = FirstPosition[sortedIndex, #, -1, 1]& /@ physicalBasisIndexList // Flatten;
+
+      (*calc identical permutation result*)
+      rules = GetMassiveIdenticalRules[#, np]& /@ identicalList // Flatten[#, 1]& // DeleteDuplicates;
+      pCFs = Table[ReplaceBraNumber[rule][amp], {amp, cfs}, {rule, rules}] // Flatten;
+      pCFCoorsDict = ReduceToBH[MatchCFDim[np, mass -> masses] /@ pCFs, bhs, np]
+          // AbsoluteTiming // (LogPri["identical reduce cost ", #[[1]]];#[[2]])&;
+      ruleCoorsDict = Table[
+        rule -> (pCFCoorsDict[#]&) /@ MatchCFDim[np, mass -> masses] /@ ReplaceBraNumber[rule] /@ cfs,
+        {rule, rules}] // Association;
+      operatorDict = GetIndependentPermutedOperatorDict[identicalList, np, ruleCoorsDict[#]&];
+
+      physicalPositionGroupedByFakeDimDict = KeySort@GroupBy[physicalBasisIndexList, rCFFakeDimDict[cfs[[#]]]&];
+      Table[
+        {
+          cfs[[physicalPositionGroupedByFakeDimDict[fakeDim]]],
+          Map[
+            #[[1]] ->
+                #[[2]][[physicalPositionGroupedByFakeDimDict[fakeDim],
+                    physicalPositionGroupedByFakeDimDict[fakeDim]]]&,
+            operatorDict, {2}]
+        }
+        , {fakeDim, Keys@physicalPositionGroupedByFakeDimDict}] // Return;
+    ];
+
+
+Options@ConstructIndependentBasis = {log -> False} ~ Join ~ Options@ConstructBareBasis // DeleteDuplicates;
+ConstructIndependentBasis[{}, operDim_Integer, identical_ : {}, OptionsPattern[]] := {};
 ConstructIndependentBasis[spins_List, operDim_Integer, identical_ : {}, opts : OptionsPattern[]] :=
-    ConstructIndependentBasis[ConstructBasis[spins, operDim, FilterRules[{opts}, Options@ConstructBasis]], identical,
+    ConstructIndependentBasis[ConstructBareBasis[spins, operDim, FilterRules[{opts}, Options@ConstructBareBasis]], identical,
       opts];
 ConstructIndependentBasis[result : {cfBasisCoordinates_List, data_Association}, identical_ : {}, OptionsPattern[]] :=
     Module[
-      {np, spins, identicalList, physicalBasisIndex, dict,
-        bh, permutedBHs, permutedBHCoorsDict, ruleCoorsDict,
-        rules, operatorDict, exprDict, totalOperator, independentCfBasis, totalCoordinates, independentPermutedBasis},
+      {spins, identicalList, phyOperatorDict,
+        exprDict, GetTotalOperator, GetIndependentBasisByTotalOp},
       spins = data["metaInfo"]["spins"];
-      np = Length@spins;
-      independentCfBasis = data["basis"];
-      physicalBasisIndex = PositionOperatorPhysicalDim[data];
-      If[Flatten@identical === {}, Return[independentCfBasis[[#]]& /@ physicalBasisIndex]];
-      bh = data["bh"] // Values // Flatten;
-      identicalList = (# ~ Append ~ If[OddQ[2 * spins[[#[[1]]]]], "A", "S"])& /@ identical;
-      rules = GetMassiveIdenticalRules[#, np]& /@ identicalList // Flatten[#, 1]& // DeleteDuplicates;
-      dict = data["reduceDict"];
-      permutedBHs = ParallelTable[ReplaceBraNumber[rule][b], {b, bh}, {rule, rules}] // Flatten;
-      permutedBHCoorsDict = ReduceToBH[permutedBHs, bh, np]
-          // AbsoluteTiming // (LogPri["identical reduce cost ", #[[1]]];#[[2]])&;
-      ruleCoorsDict = Table[rule -> (permutedBHCoorsDict[#]&) /@ ReplaceBraNumber[rule] /@ bh, {rule, rules}]
-          // Association;
-      operatorDict = GetIndependentPermutedOperatorDict[identicalList, np, ruleCoorsDict[#]&];
+      If[identical === {},
+        identicalList = {},
+        identicalList = (# ~ Append ~ If[OddQ[2 * spins[[#[[1]]]]], "A", "S"])& /@ identical;
+      ];
+      phyOperatorDict = CalcPermutationMatrixDict[result, identicalList];
+      If[phyOperatorDict === {}, Return[{}]];
       exprDict = GetTotalPermutedPolyDict[identicalList];
-      totalOperator = Dot @@ Table[exprDict[id] /. operatorDict[id], {id, identicalList}];
-      totalCoordinates = cfBasisCoordinates.totalOperator;
-      independentPermutedBasis = independentCfBasis[[#]]& /@
-          Intersection[physicalBasisIndex,
-            FindIndependentBasisPos[totalCoordinates]];
-      Return[independentPermutedBasis];
+      GetTotalOperator[opDict_] := Dot @@ Table[exprDict[id] /. opDict[id], {id, identicalList}];
+      GetIndependentBasisByTotalOp[{basis_, <||>}] := basis;
+      GetIndependentBasisByTotalOp[{basis_, opDict_?(Length@# > 0&)}] :=
+          basis[[#]]& /@ FindIndependentBasisPos[Transpose@GetTotalOperator[opDict]];
+      GetIndependentBasisByTotalOp /@ phyOperatorDict // Flatten // Return;
     ];

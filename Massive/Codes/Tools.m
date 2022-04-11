@@ -27,7 +27,7 @@ CountHead[head_] :=
           head[a_, b_]] + (Cases[list, head[a_, b_]^n_] /. head[_, _]^n_ :> n //
         Total)
     ] &;*)
-
+FindIndependentBasisPos[{}] := {};
 FindIndependentBasisPos[coordinateMatrix_?MatrixQ] := Flatten[FirstPosition[#, Except[0, _?NumericQ], {}]& /@
     RowReduce@Transpose@coordinateMatrix];
 
@@ -81,11 +81,9 @@ Map2ListWithPosition[map_, sortedkeys_] :=
       count += le;, {i, Length @ sortedkeys}
       ], l], e] // {#[[2]] // Flatten, #[[1]][[2]] // Flatten}&
     ];
-
-ReverseDict[dict_] :=
-    With[ {keys = dict // Keys},
-      Table[Sow[dict[keys[[i]]][[j]] -> keys[[i]]], {i, keys // Length}, {j, dict[keys[[i]]] // Length}] // Reap // Last // First // Association
-    ];
+ReverseDict[<||>] := <||>;
+ReverseDict[dict_Association] :=
+    Association@Flatten[#, 1]&@Table[e -> k, {k, Keys@dict}, {e, dict[k]}];
 
 Options[SyncDataTask] = {context -> Automatic, kernelAmount -> "Auto", synctask -> 20, synctime -> 10};
 SetAttributes[SyncDataTask, HoldFirst];

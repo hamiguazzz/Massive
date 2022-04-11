@@ -1,7 +1,13 @@
+(* ::Package:: *)
+
 LogPri["Amplitude Loaded"];
+
+
 
 (* ::Section:: *)
 (*Construct Amplitude*)
+
+
 MassOption[masses_List, np_] :=
     If[np > Length@masses,
       masses ~ Join ~ ConstantArray[0, np - Length@masses],
@@ -74,9 +80,12 @@ InnerConstructAmp[spins_, antispinors_, np_, ampDim_, masses_] :=
             {i, np}] // Return;
     ];
 
+
+
 (* ::Section:: *)
 (*Massless limit reduce rules*)
 (*In fact reduce faster by omitting these lower dimensions*)
+
 
 (*FruleP1MLL[np_] := {*)
 (*  sb[1, i_] * ab[1, j_] -> Sum[-sb[k, i] * ab[k, j], {k, 2, np}],*)
@@ -111,88 +120,61 @@ InnerConstructAmp[spins_, antispinors_, np_, ampDim_, masses_] :=
 (*      :> ab[i, l]^(m - 1) ab[j, k]^(n - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l])};*)
 (*ruleSchSMLL = ruleSchAMLL /. ab -> sb;*)
 s[i_, j_] := ab[i, j] sb[j, i];
-ruleP1[Num_] := {sb[1, i_] ab[1, j_] :>
-    Sum[-sb[k, i] ab[k, j], {k, 2, Num}](*~Join~{-esb[i]ab[i,j],sb[
-   j,i]eab[j]}*),
+ruleP1[Num_] := {
+  sb[1, i_] ab[1, j_] :>
+      Sum[-sb[k, i] ab[k, j], {k, 2, Num}],
   sb[1, i_]^m_ ab[1, j_] :>
-      Sum[-sb[1, i]^(m - 1) sb[k, i] ab[k, j], {k, 2, Num}](*~
-   Join~{-sb[1,i]^(m-1)esb[i]ab[i,j],-sb[1,i]^(m-1)sb[j,i]eab[j]}*),
+      Sum[-sb[1, i]^(m - 1) sb[k, i] ab[k, j], {k, 2, Num}],
   sb[1, i_] ab[1, j_]^n_ :>
-      Sum[-ab[1, j]^(n - 1) sb[k, i] ab[k, j], {k, 2, Num}](*~
-   Join~{-ab[1,j]^(n-1)esb[i]ab[i,j],-ab[1,j]^(n-1)sb[j,i]eab[j]}*),
+      Sum[-ab[1, j]^(n - 1) sb[k, i] ab[k, j], {k, 2, Num}],
   sb[1, i_]^m_ ab[1, j_]^n_ :>
-      Sum[-sb[1, i]^(m - 1) ab[1, j]^(n - 1) sb[k, i] ab[k, j], {k, 2,
-        Num}](*~Join~{-sb[1,i]^(m-1) ab[1,j]^(n-1)esb[i]ab[i,j],-sb[1,
-   i]^(m-1) ab[1,j]^(n-1)sb[j,i]eab[j]}*)};
-ruleP2[Num_] := {sb[1, 2] ab[2, i_ /; i > 2] :>
-    Sum[-sb[1, k] ab[k, i], {k, 3, Num}](*~Join~{-esb[1]ab[1,i],-sb[
-   1,i]eab[i]}*),
-  sb[1, 2]^m_ ab[2, i_ /; i > 2] :>
-      Sum[-sb[1, 2]^(m - 1) sb[1, k] ab[k, i], {k, 3, Num}](*~
-   Join~{-sb[1,2]^(m-1)esb[1]ab[1,i],-sb[1,2]^(m-1)sb[1,i]eab[i]}*),
-  sb[1, 2] ab[2, i_ /; i > 2]^n_ :>
-      Sum[-ab[2, i]^(n - 1) sb[1, k] ab[k, i], {k, 3, Num}](*~
-   Join~{-ab[2,i]^(n-1)esb[1]ab[1,i],-ab[2,i]^(n-1)sb[1,i]eab[i]}*),
-  sb[1, 2]^m_ ab[2, i_ /; i > 2]^n_ :>
-      Sum[-sb[1, 2]^(m - 1) ab[2, i]^(n - 1) sb[1, k] ab[k, i], {k, 3,
-        Num}](*~Join~{-sb[1,2]^(m-1) ab[2,i]^(n-1)esb[1]ab[1,i],-sb[1,
-   2]^(m-1) ab[2,i]^(n-1)sb[1,i]eab[i]}*),
-  sb[2, i_ /; i > 2] ab[1, 2] :>
-      Sum[-sb[k, i] ab[1, k], {k, 3, Num}](*~Join~{-esb[i]ab[1,i],-sb[
-   1,i]eab[1]}*),
-  sb[2, i_ /; i > 2]^m_ ab[1, 2] :>
-      Sum[-sb[2, i]^(m - 1) sb[k, i] ab[1, k], {k, 3, Num}](*~
-   Join~{-sb[2,i]^(m-1)esb[i]ab[1,i],-sb[2,i]^(m-1)sb[1,i]eab[1]}*),
-  sb[2, i_ /; i > 2] ab[1, 2]^n_ :>
-      Sum[-ab[1, 2]^(n - 1) sb[k, i] ab[1, k], {k, 3, Num}](*~
-   Join~{-ab[1,2]^(n-1)esb[i]ab[1,i],-ab[1,2]^(n-1)sb[1,i]eab[1]}*),
-  sb[2, i_ /; i > 2]^m_ ab[1, 2]^n_ :>
+      Sum[-sb[1, i]^(m - 1) ab[1, j]^(n - 1) sb[k, i] ab[k, j], {k, 2, Num}]};
+ruleP2[Num_] := {
+  sb[1, 2] ab[2, i_ /; i > 2 && i <= Num] :>
+      Sum[-sb[1, k] ab[k, i], {k, 3, Num}],
+  sb[1, 2]^m_ ab[2, i_ /; i > 2 && i <= Num] :>
+      Sum[-sb[1, 2]^(m - 1) sb[1, k] ab[k, i], {k, 3, Num}],
+  sb[1, 2] ab[2, i_ /; i > 2 && i <= Num]^n_ :>
+      Sum[-ab[2, i]^(n - 1) sb[1, k] ab[k, i], {k, 3, Num}],
+  sb[1, 2]^m_ ab[2, i_ /; i > 2 && i <= Num]^n_ :>
+      Sum[-sb[1, 2]^(m - 1) ab[2, i]^(n - 1) sb[1, k] ab[k, i], {k, 3, Num}],
+  sb[2, i_ /; i > 2 && i <= Num] ab[1, 2] :>
+      Sum[-sb[k, i] ab[1, k], {k, 3, Num}],
+  sb[2, i_ /; i > 2 && i <= Num]^m_ ab[1, 2] :>
+      Sum[-sb[2, i]^(m - 1) sb[k, i] ab[1, k], {k, 3, Num}],
+  sb[2, i_ /; i > 2 && i <= Num] ab[1, 2]^n_ :>
+      Sum[-ab[1, 2]^(n - 1) sb[k, i] ab[1, k], {k, 3, Num}],
+  sb[2, i_ /; i > 2 && i <= Num]^m_ ab[1, 2]^n_ :>
       Sum[-sb[2, i]^(m - 1) ab[1, 2]^(n - 1) sb[k, i] ab[1, k], {k, 3,
-        Num}](*~Join~{-sb[2,i]^(m-1) ab[1,2]^(n-1)esb[i]ab[1,i],-sb[2,
-   i]^(m-1) ab[1,2]^(n-1)sb[1,i]eab[1]}*),
-  sb[1, 3] ab[2, 3] :> Sum[-sb[1, i] ab[2, i], {i, 4, Num}](*~
-   Join~{-esb[1]ab[2,1],-sb[1,2]eab[2]}*),
+        Num}],
+  sb[1, 3] ab[2, 3] :> Sum[-sb[1, i] ab[2, i], {i, 4, Num}],
   sb[1, 3]^m_ ab[2, 3] :>
-      Sum[-sb[1, 3]^(m - 1) sb[1, i] ab[2, i], {i, 4, Num}](*~
-   Join~{-sb[1,3]^(m-1)esb[1]ab[2,1],-sb[1,3]^(m-1)sb[1,2]eab[2]}*),
+      Sum[-sb[1, 3]^(m - 1) sb[1, i] ab[2, i], {i, 4, Num}],
   sb[1, 3] ab[2, 3]^n_ :>
-      Sum[-ab[2, 3]^(n - 1) sb[1, i] ab[2, i], {i, 4, Num}](*~
-   Join~{-ab[2,3]^(n-1)esb[1]ab[2,1],-ab[2,3]^(n-1)sb[1,2]eab[2]}*),
+      Sum[-ab[2, 3]^(n - 1) sb[1, i] ab[2, i], {i, 4, Num}],
   sb[1, 3]^m_ ab[2, 3]^n_ :>
       Sum[-sb[1, 3]^(m - 1) ab[2, 3]^(n - 1) sb[1, i] ab[2, i], {i, 4,
-        Num}](*~Join~{-sb[1,3]^(m-1) ab[2,3]^(n-1)esb[1]ab[2,1],-sb[1,
-   3]^(m-1) ab[2,3]^(n-1)sb[1,2]eab[2]}*),
-  sb[2, 3] ab[1, 3] :> Sum[-sb[2, i] ab[1, i], {i, 4, Num}](*~
-   Join~{-esb[2]ab[1,2],-sb[2,1]eab[1]}*),
+        Num}],
+  sb[2, 3] ab[1, 3] :> Sum[-sb[2, i] ab[1, i], {i, 4, Num}],
   sb[2, 3]^m_ ab[1, 3] :>
-      Sum[-sb[2, 3]^(m - 1) sb[2, i] ab[1, i], {i, 4, Num}](*~
-   Join~{-sb[2,3]^(m-1)esb[2]ab[1,2],-sb[2,3]^(m-1)sb[2,1]eab[1]}*),
+      Sum[-sb[2, 3]^(m - 1) sb[2, i] ab[1, i], {i, 4, Num}],
   sb[2, 3] ab[1, 3]^n_ :>
-      Sum[-ab[1, 3]^(n - 1) sb[2, i] ab[1, i], {i, 4, Num}](*~
-   Join~{-ab[1,3]^(n-1)esb[2]ab[1,2],-ab[1,3]^(n-1)sb[2,1]eab[1]}*),
+      Sum[-ab[1, 3]^(n - 1) sb[2, i] ab[1, i], {i, 4, Num}],
   sb[2, 3]^m_ ab[1, 3]^n_ :>
-      Sum[-sb[2, 3]^(m - 1) ab[1, 3]^(n - 1) sb[2, i] ab[1, i], {i, 4,
-        Num}](*~Join~{-sb[2,3]^(m-1) ab[1,3]^(n-1)esb[2]ab[1,2],-sb[2,
-   3]^(m-1) ab[1,3]^(n-1)sb[2,1]eab[1]}*)
+      Sum[-sb[2, 3]^(m - 1) ab[1, 3]^(n - 1) sb[2, i] ab[1, i], {i, 4, Num}]
+  (*~Join~{-sb[2,3]^(m-1) ab[1,3]^(n-1)esb[2]ab[1,2],-sb[2,3]^(m-1) ab[1,3]^(n-1)sb[2,1]eab[1]}*)
 };
 ruleP3[Num_] := {sb[2, 3] ab[2, 3] :>
-    Sum[s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}](*~
-   Join~{-2esb[1]eab[1]}~Join~Sum[esb[i]eab[i],{i,Num}]*),
+    Sum[s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
   sb[2, 3]^m_ ab[2, 3] :>
       sb[2, 3]^(m - 1) Sum[
-        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}](*~Join~{-2sb[2,
-   3]^(m-1)esb[1]eab[1]}~Join~Sum[sb[2,3]^(m-1)esb[i]eab[i],{i,
-   Num}]*),
+        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
   sb[2, 3] ab[2, 3]^n_ :>
       ab[2, 3]^(n - 1) Sum[
-        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}](*~Join~{-2ab[2,
-   3]^(n-1)esb[1]eab[1]}~Join~Sum[ab[2,3]^(n-1)esb[i]eab[i],{i,
-   Num}]*),
+        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
   sb[2, 3]^m_ ab[2, 3]^n_ :>
       sb[2, 3]^(m - 1) ab[2, 3]^(n - 1) Sum[
-        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}](*~Join~{-2sb[2,
-   3]^(m-1) ab[2,3]^(n-1)esb[1]eab[1]}~Join~Sum[sb[2,3]^(m-1) ab[2,
-   3]^(n-1)esb[i]eab[i],{i,Num}]*)};
+        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}]};
 ruleSchA = {ab[i_, l_] ab[j_, k_] /;
     i < j < k < l :> (-ab[i, j] ab[k, l] + ab[i, k] ab[j, l]),
   ab[i_, l_]^m_ ab[j_, k_] /; i < j < k < l :>
@@ -203,14 +185,12 @@ ruleSchA = {ab[i_, l_] ab[j_, k_] /;
       ab[i, l]^(m - 1) ab[j, k]^(n - 1) (-ab[i, j] ab[k, l] +
           ab[i, k] ab[j, l])};
 ruleSchS = ruleSchA /. ab -> sb;
-ruleOmitLowDim[np_] = Table[sb[i, 2 * np - i + 1] -> 0, {i, 1, np}];
-rule[Num_] :=
-    Join[ruleP1[Num], ruleP2[Num], ruleP3[Num], ruleSchA, ruleSchS, ruleOmitLowDim[Num]];
-
+RuleOmitLowDim[np_] := Table[sb[i, 2 * np - i + 1] -> 0, {i, 1, np}];
 
 
 (* ::Section:: *)
 (*matching mass dimension*)
+
 
 Options[MatchCFDim] = {
   explicitmass -> False,
@@ -249,10 +229,14 @@ MatchCFDim[amp_, np_, OptionsPattern[]] :=
       Return[amp * factor];
     ];
 
+
+
 (* ::Subsection:: *)
 (*Reduce function*)
 
-ReduceRules[np_] := rule[np];
+
+ReduceRules[Np_] :=
+    Join[ruleP1[Np], ruleP2[Np], ruleP3[Np], ruleSchA, ruleSchS, RuleOmitLowDim[Np]];
 
 SetAttributes[InnerReduceDictPart, HoldFirst];
 InnerReduceDictPart[dict_, amplst_, applyFun_] :=
@@ -317,8 +301,7 @@ ReduceWithDict[dict_, amps_List, np_Integer] := ReduceWithDict[dict, #, np]& /@ 
 ReduceWithDict[dict_, amp_, np_Integer] :=
     Module[ {F, dispRules, applyFun},
       dispRules = ReduceRules[np];
-      applyFun = (Map[(# /. dispRules) &, #]
-          // Total // Expand // Sum2List) &;
+      applyFun = ( Plus @@ Map[(# /. dispRules) &, #] // Expand // Sum2List) &;
       F = InnerReduceDictPart[dict, Sum2List[Expand[amp]], applyFun] // Flatten // Total // Expand;
       Return[F];
     ];
@@ -331,10 +314,11 @@ Options[ReduceSt] = {
 ReduceSt[np_Integer, opts : OptionsPattern[]] := ReduceSt[# , np, FilterRules[{opts}, Options[ReduceSt]]]&;
 ReduceSt[amp_Integer, np_Integer, OptionsPattern[]] := amp;
 ReduceSt[amp_, np_Integer, OptionsPattern[]] :=
-    Module[ {F = amp, F1, iter = 1, dispRules, applyFun},
+    Module[ {F = Expand@amp, F1, iter = 1, dispRules, applyFun},
       dispRules = ReduceRules[np];
-      applyFun = ((If[! OptionValue[parallelized], Map, ParallelMap])
-      [(# /. dispRules) &, Sum2List[Expand[#]]] // Total // Expand) &;
+      applyFun = (
+        Plus @@ (Expand /@ ((If[! OptionValue[parallelized], Map, ParallelMap])
+        [(# /. dispRules) &, Sum2List@#] ))) &;
       While[True,
         F1 = applyFun@F;
         If[ F1 === F,
@@ -354,13 +338,19 @@ ReduceSt[amp_, np_Integer, OptionsPattern[]] :=
 (* ::Section:: *)
 (*coefficient matrix*)
 
+
 FindCor[amp_, ampDbasis_] := FindCoordinate[amp, ampDbasis, !(MatchQ[#, _ab | _sb]) &];
 FindCor[ampDbasis_] := FindCoordinate[#, ampDbasis, !(MatchQ[#, _ab | _sb]) &]&;
 
+
+
 (* ::Section:: *)
 (*obtain d-dim basis*)
+
+
 $MaxKernelAmount = 4;
 Options[ReduceToBH] = {
+  minalParalledAmount -> 100,
   kernelAmount -> "Auto", log -> False, (*Global option*)
   withDict -> True, (*True to ModeII, False to ModeI *)
   externalReduceDict -> <||>, (*Mode II only*)
@@ -374,6 +364,10 @@ ReduceToBH[ampsFrom_List, bhBasis_List, np_Integer, opts : OptionsPattern[]] :=
 ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]] :=
     Module[ {coorDict, reduceFun, amps = Keys@ampsFromDict, dealingAmp,
       separateAmpCalcList = {}, kernels = Length[Kernels[]], dictSync},
+      If[Length@ampsFromDict < OptionValue@minalParalledAmount,
+        Return[Table[
+          k -> FindCor[bhBasis]@ReduceWithDict[np]@k,
+          {k, Keys@ampsFromDict}] // Association]];
       coorDict = <||>;
       SetSharedVariable[coorDict];
       If[ kernels === "Auto",
@@ -422,9 +416,6 @@ ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]]
             coorDict ~ AssociateTo ~ (amp -> FindCor[bhBasis] @
                 ReduceWithDict[dict, amp, np]);
         SetAttributes[reduceFun, HoldFirst];
-        Options[reduceFun] = {
-          log -> OptionValue@log
-        };
         (*SetSharedVariable[ampsFromDict, dictSync]*);
         dictSync = OptionValue@externalReduceDict;
         (*Context must contains current package path*)
@@ -432,23 +423,29 @@ ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]]
           synctime -> OptionValue@synctime, context -> $ContextPath]
             // AbsoluteTiming
             // If[OptionValue@log, LogPri["dict reduction cost ", #[[1]]]]& ;
-        Sow[dictSync, "reduceDict"];
       ];
       Return[coorDict];
     ];
-
-(*TODO change massless dealing*)
-Options[ConstructBasis] = {
+IncludedCFBasisQ[operDim_, spins_, codeDim_, antiSpinors_, masses_, includeLowerDim_] :=
+    Module[{thisOpDim},
+      If[!CheckAmpConstruction[spins, codeDim - np, antiSpinors, masses], Return[False];];
+      thisOpDim = codeDim - Plus @@ MapThread[If[#2 === 1 && #1 === 1, 1, 0]& , {spins, antiSpinors}];
+      If[includeLowerDim,
+        Return[thisOpDim <= operDim];,
+        Return[thisOpDim == operDim];
+      ];
+    ];
+Options[ConstructBareBasis] = {
   explicitmass -> False, fund -> "\[Lambda]t", mass -> All,
   withDict -> True, kernelAmount -> "Auto", log -> False,
   maxntcount -> Infinity, tryMax -> Infinity,
   synctask -> Infinity, synctime -> Infinity, externalReduceDict -> <||>};
-ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
+ConstructBareBasis[spins_, operDim_, opts : OptionsPattern[]] :=
     Module[
       {
         metaInfo, masses = MassOption[OptionValue@mass, Length@spins],
         antiList, dimCodeMinimal, np = Length@spins,
-        dimBHMin, nAMax, dimCFFrom, dimCFTo,
+        nAMax, dimCFFrom, dimCFTo,
         GetNeededBHBasisDimList,
         NeededCFBasisQ,
         sortedBasis, sortedCFCoordinates,
@@ -472,22 +469,14 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
       dimCFFrom = Max[dimCodeMinimal, operDim - Plus@MapThread[If[#2 =!= 0, 2 * #1, 0]&, {spins, masses}]];
       dimCFTo = operDim + nAMax;
       GetNeededBHBasisDimList[indexListInner_] := (#[[1]] + Plus @@ #[[2]])& /@ indexListInner // DeleteDuplicates;
-      NeededCFBasisQ[codeDim_, antiSpinors_, includeLowerDim_ : False] :=
-          Module[{thisOpDim},
-            If[!CheckAmpConstruction[spins, codeDim - np, antiSpinors, masses], Return[False];];
-            thisOpDim = codeDim - Plus @@ MapThread[If[#2 === 1 && #1 === 1, 1, 0]& , {spins, antiSpinors}];
-            If[includeLowerDim,
-              Return[thisOpDim <= operDim];,
-              Return[thisOpDim == operDim];
-            ];
-          ];
+      NeededCFBasisQ = IncludedCFBasisQ[operDim, spins, #[[1]], #[[2]], masses, True]&;
       antiList = Fold[
         (Flatten[#, 1]&@
             Table[l ~ Append ~ i, {l, #1}, {i, 0,
               If[masses[[#2]] === 0, 0, 2 * spins[[#2]]]}]
         )&, {{}}, Range[Length@spins]];
 
-      cfIndexList = Select[(NeededCFBasisQ[#[[1]], #[[2]], True])&]@
+      cfIndexList = Select[NeededCFBasisQ]@
           Flatten[#, 1]&@Table[{d, l}, {d, dimCFFrom, dimCFTo}, {l, antiList}];
       If[Length[cfIndexList] == 0,
         Throw["No such operator!"];
@@ -503,9 +492,9 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
       GenCFBasis[dim_, antispinorList_] := ConstructAmp[
         spins, dim, antispinor -> antispinorList, constructOpts];
       (
-        bhBasisDict = ParallelMap[(# -> GenBHBasis@#)& , bhDimList ] // Association // KeySort;
+        bhBasisDict = ParallelMap[(# -> GenBHBasis@#)& , bhDimList ] // Association // DeleteCases[{}] // KeySort;
         bhBasis = bhBasisDict // Values // Flatten;
-        cfBasisDict = ParallelMap[(# -> GenCFBasis @@ #)& , cfIndexList] // Association;
+        cfBasisDict = ParallelMap[(# -> GenCFBasis @@ #)& , cfIndexList] // Association // DeleteCases[{}];
         reversedCFBasisDict = ReverseDict[cfBasisDict];
       ) // AbsoluteTiming // If[OptionValue@log, LogPri["Constructing amplitudes costs ", #[[1]]];]&;
 
@@ -535,7 +524,7 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
           // (If[OptionValue@log, LogPri["Coefficients totally costs:", #[[1]]];];#[[2]])&;
       If[!OptionValue@withDict,
         cfCoordinateDict = cfCoordinateDict[[1]];,
-        reduceDict = cfCoordinateDict[[2]][[1]][[1]];
+        (*        reduceDict = cfCoordinateDict[[2]][[1]][[1]];*)
         cfCoordinateDict = cfCoordinateDict[[1]];
       ];
       cfCoordinateDict = Association @ Table[matchedCFDict[e] -> cfCoordinateDict[e], {e, Keys@ reducedAmpDict}];
@@ -567,10 +556,10 @@ ConstructBasis[spins_, operDim_, opts : OptionsPattern[]] :=
       (*      permutedBasisCoor = permutedBasisCoor[[#]];)&@index;*)
       (*      LogPri["Final basis amount is ", Length@permutedBasis];*)
       metaInfo = {"spins" -> spins, "operDim" -> operDim,
-        "mass" -> masses, "explicitmass" -> OptionValue@explicitmass, "NeededCFBasisQ" -> NeededCFBasisQ} // Association;
+        "mass" -> masses, "explicitmass" -> OptionValue@explicitmass} // Association;
       Return[{sortedCFCoordinates,
         <|"basis" -> sortedBasis, "coordinate" -> cfCoordinateDict,
-          "cf" -> cfBasisDict, "bh" -> bhBasisDict, "reduceDict" -> reduceDict, "metaInfo" -> metaInfo
+          "cf" -> cfBasisDict, "bh" -> bhBasisDict, "metaInfo" -> metaInfo
         |>}];
     ];
 
@@ -578,11 +567,15 @@ PositionOperatorPhysicalDim[constructBasisResult : {coor_List, constructBasisDat
     PositionOperatorPhysicalDim[constructBasisData];
 PositionOperatorPhysicalDim[constructBasisData_Association] := Module[
   {NeededCFBasisQ, cfBasisDict, reverseBasisDict, basis, index},
-  NeededCFBasisQ = constructBasisData["metaInfo"]["NeededCFBasisQ"];
+  metaInfo = constructBasisData["metaInfo"];
+  NeededCFBasisQ = IncludedCFBasisQ[
+    metaInfo["operDim"], metaInfo["spins"],
+    #[[1]], #[[2]], metaInfo["mass"], False
+  ]&;
   cfBasisDict = constructBasisData["cf"];
   basis = constructBasisData["basis"];
   reverseBasisDict = ReverseDict@cfBasisDict;
-  index = (NeededCFBasisQ[#[[1]], #[[2]], False]&@reverseBasisDict[#]&@#)& /@ basis // PositionIndex;
+  index = (NeededCFBasisQ@reverseBasisDict[#]&@#)& /@ basis // PositionIndex;
   If[!KeyExistsQ[index, True], Return[{}]];
   Return[index[True]];
 ];
