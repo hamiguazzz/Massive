@@ -10,4 +10,7 @@
 *.disable
 
 #test files
-Tests/
+Massive/Tests/
+
+#output files
+Massive/Output/**/*.txt

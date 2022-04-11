@@ -139,7 +139,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
   Return[resultDict /. Null -> {}];
 ];
 
-Options[OrganizeResultTexDict] := {heading -> "", delimiter -> "\n", exportPath -> ""};
+Options[OrganizeResultTexDict] := {heading -> "", delimiter -> "\n", exportPath -> "", equstart->"\\[", equend->"\\]"};
 OrganizeResultTexDict[texDict_?AssociationQ, OptionsPattern[]] := Module[
   {
     EquLine, DimHeadLine,
@@ -149,7 +149,9 @@ OrganizeResultTexDict[texDict_?AssociationQ, OptionsPattern[]] := Module[
   },
   EquLine[key_] := If[
     Length@texDict[key] > 0 && texDict[key][[1]] =!= "",
-    ("$$" <> endLine <> ToString@# <> endLine <> "$$" <> endLine <> endLine)& /@ texDict[key] // StringJoin,
+    (OptionValue@equstart <> endLine
+        <> ToString@# <> endLine
+        <> OptionValue@equend <> endLine <> endLine)& /@ texDict[key] // StringJoin,
     ""
   ];
   DimHeadLine[key_] := If[
