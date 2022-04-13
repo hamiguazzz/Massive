@@ -63,16 +63,10 @@ ImportModel[fileName_String] := Module[{
 ];
 
 (* ::Section:: *)
-(*Control basis construction*)
-
-ClearSavedConstructBasis[] := (ClearAll[SavedConstructBasis]; InitialSavedConstructBasis[];);
-InitialSavedConstructBasis[] := SavedConstructBasis[parameters___] :=
-    SavedConstructBasis[parameters] = ConstructBareBasis[parameters];
-InitialSavedConstructBasis[];
 
 (*output mode: "amplitude", "operator", "feyncalc", "tex" *)
 (*TODO deliver options*)
-Options[BasisByModel] := {output -> "tex"};
+Options[BasisByModel] := {output -> "tex", log -> False};
 BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Module[
   {particles, massivePos, masslessPos, np, spins, masses, colors, charges, identicalList,
     externalDict, currentBasis, currentResult, resultDict},
@@ -107,14 +101,13 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
       ]
     , {i, Length@particles}];
 
-  LogPri["Spin:", spins, "\n", "Mass:", masses, "\n", "Color:", colors, "\n",
-    "Identical:", identicalList, "\n", "Field:", externalDict];
+  If[OptionValue@log, LogPri["Spin:", spins, "\n", "Mass:", masses, "\n", "Color:", colors, "\n",
+    "Identical:", identicalList, "\n", "Field:", externalDict];];
+
   Do[
     currentBasis = {};
-    Catch[currentBasis = SavedConstructBasis[spins, dim, mass -> masses];];
-    If[currentBasis == {}, Continue[];];
     If[0 == Length@Select[colors, # =!= ""&],
-      currentResult = ConstructIndependentBasis[currentBasis, identicalList, mass -> masses];
+      currentResult = ConstructIndependentBasis[spins, dim, identicalList, mass -> masses, log -> OptionValue@log];
       resultDict[dim] = Switch[ToLowerCase@OptionValue@output,
         "amplitude" | "amp", currentResult,
         "operator" | "op", Amp2WeylOp[np, mass -> masses] /@ currentResult,
@@ -124,7 +117,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
         _, Null
       ];
       ,
-      currentResult = ConstructIndependentColoredBasis[currentBasis, colors, identicalList];
+      currentResult = ConstructIndependentColoredBasis[spins, dim, colors, identicalList, mass -> masses, log -> OptionValue@log];
       resultDict[dim] = Switch[ToLowerCase@OptionValue@output,
         "amplitude" | "amp", currentResult,
         "operator" | "op", Amp2WeylOp[np, colorType -> colors, mass -> masses] /@ currentResult,
@@ -139,7 +132,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
   Return[resultDict /. Null -> {}];
 ];
 
-Options[OrganizeResultTexDict] := {heading -> "", delimiter -> "\n", exportPath -> "", equstart->"\\[", equend->"\\]"};
+Options[OrganizeResultTexDict] := {heading -> "", delimiter -> "\n", exportPath -> "", equstart -> "\\[", equend -> "\\]"};
 OrganizeResultTexDict[texDict_?AssociationQ, OptionsPattern[]] := Module[
   {
     EquLine, DimHeadLine,
