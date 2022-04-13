@@ -236,7 +236,7 @@ MatchCFDim[amp_, np_, OptionsPattern[]] :=
 
 
 ReduceRules[Np_] :=
-    Join[ruleP1[Np], ruleP2[Np], ruleP3[Np], ruleSchA, ruleSchS, RuleOmitLowDim[Np]];
+    Join[ruleP1[Np], ruleP2[Np], ruleP3[Np], ruleSchA, ruleSchS];
 
 SetAttributes[InnerReduceDictPart, HoldFirst];
 InnerReduceDictPart[dict_, amplst_, applyFun_] :=
