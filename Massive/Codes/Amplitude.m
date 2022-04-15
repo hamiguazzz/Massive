@@ -428,18 +428,16 @@ ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]]
     ];
 
 CalcNeededFakeDim[spins_List, physicalDim_Integer, massParm_ : All] := Module[
-  {np = Length@spins, masses, nAmax, dimMin, spinLeft, dims},
+  {np = Length@spins, masses, dimFakeMinimal, dimMin, spinLeft, dims},
   masses = MassOption[massParm, np];
-  nAmax = Plus @@ MapThread[
-    If[#2 =!= 0 && #1 == 1, 1, 0]&,
-    {spins, masses}];
-  spinLeft = Table[If[spins[[i]] != 1 && masses[[i]] =!= 0, spins[[i]], Missing[]], {i, np}] // DeleteMissing;
-  dimMin = np + Plus @@ Abs@spins;
-  If[physicalDim < dimMin - nAmax, Return[{}]];
-  dims = Table[Range[physicalDim + nA, physicalDim + nA + Plus @@ (2 * spinLeft)], {nA, Range[0, nAmax]}] // Flatten // DeleteDuplicates;
-  dims = Select[# >= dimMin && EvenQ[# - dimMin]&][dims];
-  If[dims === {}, Return[{}]];
-  Return[Range[Min[dims], Max[dims], 2]];
+  dimFakeMinimal = np + Plus @@ Abs@spins;
+  Return[Range[
+    Max[
+      dimFakeMinimal,
+      If[OddQ[physicalDim - dimFakeMinimal], physicalDim + 1, physicalDim]
+    ],
+    If[OddQ[# - dimFakeMinimal], # - 1, #]&[physicalDim + Plus @@ MapThread[If[#2 =!= 0, 2 * #1, 0]&, {spins, masses}]]
+    , 2]];
 ];
 
 CalcFakeDim[codeDim_Integer, antispinor_List] := codeDim + Plus @@ antispinor;
