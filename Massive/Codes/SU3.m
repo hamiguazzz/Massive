@@ -288,7 +288,7 @@ AuxConstructIdenticalColorBasisByFakeDim[
   (*Find independent parts*)
   GetTotalOperator[opDict_] := Dot @@ Table[exprDict[id] /. opDict[id], {id, identicalList}];
   GetIndependentBasisByTotalOp[{basis_, opDict_}] :=
-      basis[[#]]& /@ FindIndependentBasisPos[GetTotalOperator[opDict]];
+      basis[[#]]& /@ FindIndependentBasisPos[Transpose@GetTotalOperator[opDict]];
   GetIndependentBasisByTotalOp @ coloredPhyOperatorDict // Return;
 ];
 
