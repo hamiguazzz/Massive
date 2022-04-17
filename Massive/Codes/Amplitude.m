@@ -119,7 +119,7 @@ InnerConstructAmp[spins_, antispinors_, np_, ampDim_, masses_] :=
 (*  ab[i_, l_]^m_ * ab[j_, k_]^n_ /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0*)
 (*      :> ab[i, l]^(m - 1) ab[j, k]^(n - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l])};*)
 (*ruleSchSMLL = ruleSchAMLL /. ab -> sb;*)
-s[i_, j_] := ab[i, j] sb[j, i];
+MandelstamS[i_, j_] := ab[i, j] sb[j, i];
 ruleP1[Num_] := {
   sb[1, i_] ab[1, j_] :>
       Sum[-sb[k, i] ab[k, j], {k, 2, Num}],
@@ -165,16 +165,16 @@ ruleP2[Num_] := {
   (*~Join~{-sb[2,3]^(m-1) ab[1,3]^(n-1)esb[2]ab[1,2],-sb[2,3]^(m-1) ab[1,3]^(n-1)sb[2,1]eab[1]}*)
 };
 ruleP3[Num_] := {sb[2, 3] ab[2, 3] :>
-    Sum[s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
+    Sum[MandelstamS[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
   sb[2, 3]^m_ ab[2, 3] :>
       sb[2, 3]^(m - 1) Sum[
-        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
+        MandelstamS[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
   sb[2, 3] ab[2, 3]^n_ :>
       ab[2, 3]^(n - 1) Sum[
-        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
+        MandelstamS[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
   sb[2, 3]^m_ ab[2, 3]^n_ :>
       sb[2, 3]^(m - 1) ab[2, 3]^(n - 1) Sum[
-        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}]};
+        MandelstamS[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}]};
 ruleSchA = {ab[i_, l_] ab[j_, k_] /;
     i < j < k < l :> (-ab[i, j] ab[k, l] + ab[i, k] ab[j, l]),
   ab[i_, l_]^m_ ab[j_, k_] /; i < j < k < l :>
@@ -236,7 +236,7 @@ MatchCFDim[amp_, np_, OptionsPattern[]] :=
 
 
 ReduceRules[Np_] :=
-    Join[ruleP1[Np], ruleP2[Np], ruleP3[Np], ruleSchA, ruleSchS, RuleOmitLowDim[Np]];
+    Join[ruleP1[Np], ruleP2[Np], ruleP3[Np], ruleSchA, ruleSchS];
 
 SetAttributes[InnerReduceDictPart, HoldFirst];
 InnerReduceDictPart[dict_, amplst_, applyFun_] :=
@@ -426,156 +426,108 @@ ReduceToBH[ampsFromDict_Association, bhBasis_List, np_Integer, OptionsPattern[]]
       ];
       Return[coorDict];
     ];
-IncludedCFBasisQ[operDim_, spins_, codeDim_, antiSpinors_, masses_, includeLowerDim_] :=
-    Module[{thisOpDim},
-      If[!CheckAmpConstruction[spins, codeDim - np, antiSpinors, masses], Return[False];];
-      thisOpDim = codeDim - Plus @@ MapThread[If[#2 === 1 && #1 === 1, 1, 0]& , {spins, antiSpinors}];
-      If[includeLowerDim,
-        Return[thisOpDim <= operDim];,
-        Return[thisOpDim == operDim];
-      ];
-    ];
-Options[ConstructBareBasis] = {
-  explicitmass -> False, fund -> "\[Lambda]t", mass -> All,
-  withDict -> True, kernelAmount -> "Auto", log -> False,
-  maxntcount -> Infinity, tryMax -> Infinity,
-  synctask -> Infinity, synctime -> Infinity, externalReduceDict -> <||>};
-ConstructBareBasis[spins_, operDim_, opts : OptionsPattern[]] :=
+
+CalcNeededFakeDim[spins_List, physicalDim_Integer, massParm_ : All] := Module[
+  {np = Length@spins, masses, dimFakeMinimal, dimMin, spinLeft, dims},
+  masses = MassOption[massParm, np];
+  dimFakeMinimal = np + Plus @@ Abs@spins;
+  Return[Range[
+    Max[
+      dimFakeMinimal,
+      If[OddQ[physicalDim - dimFakeMinimal], physicalDim + 1, physicalDim]
+    ],
+    If[OddQ[# - dimFakeMinimal], # - 1, #]&[physicalDim + Plus @@ MapThread[If[#2 =!= 0, 2 * #1, 0]&, {spins, masses}]]
+    , 2]];
+];
+
+CalcFakeDim[codeDim_Integer, antispinor_List] := codeDim + Plus @@ antispinor;
+CalcPhysicalDim[spins_List, codeDim_Integer, antispinor__List, massParm_ : All] :=
+    codeDim - Plus @@ MapThread[
+      If[#2 =!= 0 && #1 == 1 && #3 == 1, 1, 0]&,
+      {spins, MassOption[massParm, Length@spins], antispinor}];
+
+Options@ConstructCFIByFakeDim = Normal@Association@(Join @@ (Options /@
+    {ConstructAmp, MatchCFDim, ReduceToBH}));
+ConstructCFIByFakeDim[spins_, fakeDim_, opts : OptionsPattern[]] :=
     Module[
       {
-        metaInfo, masses = MassOption[OptionValue@mass, Length@spins],
-        antiList, dimCodeMinimal, np = Length@spins,
-        nAMax, dimCFFrom, dimCFTo,
-        GetNeededBHBasisDimList,
-        NeededCFBasisQ,
-        sortedBasis, sortedCFCoordinates,
-        cfIndexList, bhDimList,
-        cfBasisDict, bhBasisDict,
-        matchedCFDict, reversedCFBasisDict, reducedAmpDict,
-        cfCoordinateDict = <||>, bhBasis, reduceDict,
-        constructOpts, reduceOpts,
-        GenBHBasis, GenCFBasis,
-        ZRank
-      },
-      (*Construct amplitude index*)
-      nAMax = Total@MapThread[If[#2 =!= 0, If[#1 == 1, 1, 0], 0]&, {spins, masses}];
-      dimCodeMinimal = np + Plus @@ Abs@spins;
-      (*minimal operator dimension *)
-      (*d_o = d_c - nA*)
-      (*l -> 0,...,spin*2*)
-      (*massive CF[d_c,sumL]->BH[d_c+sumL] & .. &BH[dimMin] *)
-      (*MLL CF[d_c,sumL]->BH[dim+sumL]*)
-      If[operDim < dimCodeMinimal - nAMax, Throw[{operDim, "Below minimal operator dimension!"}]];
-      dimCFFrom = Max[dimCodeMinimal, operDim - Plus@MapThread[If[#2 =!= 0, 2 * #1, 0]&, {spins, masses}]];
-      dimCFTo = operDim + nAMax;
-      GetNeededBHBasisDimList[indexListInner_] := (#[[1]] + Plus @@ #[[2]])& /@ indexListInner // DeleteDuplicates;
-      NeededCFBasisQ = IncludedCFBasisQ[operDim, spins, #[[1]], #[[2]], masses, True]&;
+        np, masses, constructOpts, reduceOpts, dimFakeMinimal,
+        TimingTest, GenCFs, antiList, cfIndexList, bhs, cfsDict, cfsDictReverse, matchOpts,
+        matchedCFCoordinateDict, totalCF, totalCoordinate, independentIndex, metaInfo},
+      np = Length@spins;
+      masses = MassOption[OptionValue@mass, np];
+      constructOpts = FilterRules[{opts}, Options@ConstructAmp];
+      matchOpts = FilterRules[{opts}, Options@MatchCFDim];
+      reduceOpts = FilterRules[{opts}, Options@ReduceToBH];
+      dimFakeMinimal = np + Plus @@ Abs@spins;
+
+      If[fakeDim < dimFakeMinimal, Throw[{fakeDim, "Below minimal operator dimension!"}]];
+      If[OddQ[fakeDim - dimFakeMinimal], Throw[{fakeDim, "Wrong fake dimension!"}]];
+
+      TimingTest[message_] := (# // AbsoluteTiming //
+          (If[OptionValue@log, LogPri[message, #[[1]]];];#[[2]])&)&;
+      GenCFs[{codeDim_, antispinors_}] := ConstructAmp[spins, codeDim, antispinor -> antispinors, constructOpts];
+
       antiList = Fold[
         (Flatten[#, 1]&@
             Table[l ~ Append ~ i, {l, #1}, {i, 0,
               If[masses[[#2]] === 0, 0, 2 * spins[[#2]]]}]
-        )&, {{}}, Range[Length@spins]];
-
-      cfIndexList = Select[NeededCFBasisQ]@
-          Flatten[#, 1]&@Table[{d, l}, {d, dimCFFrom, dimCFTo}, {l, antiList}];
-      If[Length[cfIndexList] == 0,
-        Throw["No such operator!"];
-      ];
-      bhDimList = GetNeededBHBasisDimList[cfIndexList];
-      ZRank[matrix_] := If[matrix === {}, 0, MatrixRank@matrix];
-      constructOpts = FilterRules[{opts}, Options[ConstructAmp]];
+        )&, {{}}, Range[np]] // DeleteCases[ConstantArray[0, np]];
+      cfIndexList = Table[If[fakeDim - Plus @@ a >= dimFakeMinimal, {fakeDim - Plus @@ a, a}, Missing[]],
+        {a, antiList}] // DeleteMissing;
 
       If[OptionValue@log,
-        LogPri["Involved BH basis : ", bhDimList];
+        LogPri["Involved BH basis spins: ", spins, " @dim = " , fakeDim];
         LogPri["Involved CF basis : ", cfIndexList];];
-      GenBHBasis[dim_] := ConstructAmp[spins, dim, constructOpts];
-      GenCFBasis[dim_, antispinorList_] := ConstructAmp[
-        spins, dim, antispinor -> antispinorList, constructOpts];
+
       (
-        bhBasisDict = ParallelMap[(# -> GenBHBasis@#)& , bhDimList ] // Association // DeleteCases[{}] // KeySort;
-        bhBasis = bhBasisDict // Values // Flatten;
-        cfBasisDict = ParallelMap[(# -> GenCFBasis @@ #)& , cfIndexList] // Association // DeleteCases[{}];
-        reversedCFBasisDict = ReverseDict[cfBasisDict];
-      ) // AbsoluteTiming // If[OptionValue@log, LogPri["Constructing amplitudes costs ", #[[1]]];]&;
+        bhs = ConstructAmp[spins, fakeDim, constructOpts];
+        cfsDict = Association@Table[e -> GenCFs@e, {e, cfIndexList}];
+        cfsDictReverse = ReverseDict@cfsDict;
+        cfsDictReverse = cfsDictReverse // KeySortBy[
+          CalcPhysicalDim[spins, cfsDictReverse[#][[1]], cfsDictReverse[#][[2]], masses]&];
+      ) // TimingTest["Constructing amplitudes costs:"];
 
-      reduceOpts = Association@ FilterRules[{opts}, Options[ReduceToBH]];
-      reduceOpts = If[OptionValue@withDict,
-        reduceOpts // Normal,
-        AssociateTo[reduceOpts, maxntcount ->
-            If[ OptionValue@maxntcount == "Auto",
-              Max[CountHead[If[ OptionValue@fund == "\[Lambda]t",
-                ab, sb
-              ]] /@ Keys[reversedCFBasisDict]] - 1,
-              OptionValue@maxntcount
-            ];
-        ] // Normal;
+      If[Length[cfsDictReverse] == 0,
+        If[Length@bhs == 0,
+          Throw["No such operator!"];,
+          metaInfo = {"spins" -> spins, "fakeDim" -> fakeDim,
+            "mass" -> masses, "opts" -> {opts}} // Association;
+          Return[
+            {IdentityMatrix[Length@bhs],
+              <|"basis" -> bhs, "cf" -> <||>, "bh" -> bhs, "metaInfo" -> metaInfo|>}
+          ];
+        ];
       ];
-      matchedCFDict = reducedAmpDict = <||>;
-      Do[
-        If[!KeyExistsQ[matchedCFDict, #],
-          AssociateTo[matchedCFDict, # -> e];
-          AssociateTo[reducedAmpDict, # -> reversedCFBasisDict[e]];
-        ]&@MatchCFDim[e, np, FilterRules[{opts}, Options[MatchCFDim]]];
-        , {e, Keys@reversedCFBasisDict}];
 
-      cfCoordinateDict = ReduceToBH[
-        reducedAmpDict, bhBasis, np, reduceOpts] // Reap
-          // AbsoluteTiming
-          // (If[OptionValue@log, LogPri["Coefficients totally costs:", #[[1]]];];#[[2]])&;
-      If[!OptionValue@withDict,
-        cfCoordinateDict = cfCoordinateDict[[1]];,
-        (*        reduceDict = cfCoordinateDict[[2]][[1]][[1]];*)
-        cfCoordinateDict = cfCoordinateDict[[1]];
-      ];
-      cfCoordinateDict = Association @ Table[matchedCFDict[e] -> cfCoordinateDict[e], {e, Keys@ reducedAmpDict}];
-      If[OptionValue@log, LogPri["Involved CF amplitude amount is ", reversedCFBasisDict // Length];
-      LogPri["Involved BH amplitude amount is ", bhBasis // Length];];
-      (*      LogPri["Involved BH amplitude amount is ",*)
-      (*        Fold[Plus, ConstantArray[0, Length@bhBasis],*)
-      (*          Map[((# == 0) /. {True -> 0, False -> 1}) &,*)
-      (*            (Values@coordinateDict), {2}]]*)
-      (*            // DeleteCases[#, 0] & // Length*)
-      (*      ];*)
-      If[OptionValue@log, LogPri["Coordinate rank is ", ZRank[Values@cfCoordinateDict]]];
-      (*Sort*)
-      sortedBasis = Keys[cfCoordinateDict] //
-          SortBy[(Total@Flatten@reversedCFBasisDict[matchedCFDict[#]])&];
-      sortedCFCoordinates = cfCoordinateDict[#]& /@ sortedBasis;
+      If[OptionValue@log,
+        LogPri["Involved CF(except BH) amplitude amount is ", cfsDictReverse // Length];
+        LogPri["Involved BH amplitude amount is ", bhs // Length];];
 
-      (*Get independent basis*)
-      (sortedBasis = sortedBasis[[#]]; sortedCFCoordinates = sortedCFCoordinates[[#]])&@
-          FindIndependentBasisPos[sortedCFCoordinates] // AbsoluteTiming //
-          If[OptionValue@log, LogPri["Ranking costs ", #[[1]]]]&;
-      (*Select from minimal dimension*)
-      (*This should not be done now.  Otherwise the permutation operator matrix will be wrong*)
-      (*      index = Flatten@Position[permutedBasis,*)
-      (*        e_ /; MemberQ[#, e], 1*)
-      (*      ]&@Select[permutedBasis,*)
-      (*        NeededCFBasisQ[reversedCFBasisDict[cfPermutedDict[#]][[1]], reversedCFBasisDict[cfPermutedDict[#]][[2]], False]&];*)
-      (*      (permutedBasis = permutedBasis[[#]];*)
-      (*      permutedBasisCoor = permutedBasisCoor[[#]];)&@index;*)
-      (*      LogPri["Final basis amount is ", Length@permutedBasis];*)
-      metaInfo = {"spins" -> spins, "operDim" -> operDim,
-        "mass" -> masses, "explicitmass" -> OptionValue@explicitmass} // Association;
-      Return[{sortedCFCoordinates,
-        <|"basis" -> sortedBasis, "coordinate" -> cfCoordinateDict,
-          "cf" -> cfBasisDict, "bh" -> bhBasisDict, "metaInfo" -> metaInfo
-        |>}];
+      matchedCFCoordinateDict = ReduceToBH[MatchCFDim[np, matchOpts] /@ Keys@cfsDictReverse, bhs, np, reduceOpts] //
+          TimingTest["Coefficients totally costs:"];
+
+      totalCF = Keys@cfsDictReverse ~ Join ~ bhs;
+      totalCoordinate = Join[
+        matchedCFCoordinateDict[MatchCFDim[np, matchOpts]@#]& /@ Keys@cfsDictReverse,
+        IdentityMatrix[Length@bhs]];
+      independentIndex = FindIndependentBasisPos[totalCoordinate];
+      metaInfo = {"spins" -> spins, "fakeDim" -> fakeDim,
+        "mass" -> masses, "opts" -> {opts}} // Association;
+      Return[{totalCoordinate[[independentIndex]],
+        <|"basis" -> totalCF[[independentIndex]], "cf" -> cfsDict, "bh" -> bhs, "metaInfo" -> metaInfo|>}];
     ];
 
-PositionOperatorPhysicalDim[constructBasisResult : {coor_List, constructBasisData_Association}] :=
-    PositionOperatorPhysicalDim[constructBasisData];
-PositionOperatorPhysicalDim[constructBasisData_Association] := Module[
-  {NeededCFBasisQ, cfBasisDict, reverseBasisDict, basis, index},
-  metaInfo = constructBasisData["metaInfo"];
-  NeededCFBasisQ = IncludedCFBasisQ[
-    metaInfo["operDim"], metaInfo["spins"],
-    #[[1]], #[[2]], metaInfo["mass"], False
-  ]&;
-  cfBasisDict = constructBasisData["cf"];
-  basis = constructBasisData["basis"];
-  reverseBasisDict = ReverseDict@cfBasisDict;
-  index = (NeededCFBasisQ@reverseBasisDict[#]&@#)& /@ basis // PositionIndex;
-  If[!KeyExistsQ[index, True], Return[{}]];
-  Return[index[True]];
-];
+SeparateFakeResultPhysical[{iCFCoor_?MatrixQ, data_Association}] :=
+    Module[{
+      PhysicalCalc, DimCalc, icfs, bhs, cfs, fakeDim
+    },
+      fakeDim = data["metaInfo"]["fakeDim"];
+      icfs = data["basis"];
+      bhs = data["bh"];
+      cfs = data["cf"] // ReverseDict;
+      DimCalc[{codeDim_, antispinor_}] := CalcPhysicalDim[data["metaInfo"]["spins"], codeDim, antispinor,
+        data["metaInfo"]["mass"]];
+      PhysicalCalc[amp_] := If[MemberQ[bhs, amp], fakeDim, DimCalc[cfs[amp]]];
+      Return[PositionIndex[PhysicalCalc /@ icfs]];
+    ];

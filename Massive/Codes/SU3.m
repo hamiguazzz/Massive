@@ -197,64 +197,78 @@ GetProjectInnerColorOp[colorIndDict_Association, operatorDict_Association] := Mo
 Options[ConstructIndependentColoredBasis] = Join[{
   ythead -> defaultYTHead,
   allowedmemory -> 4 * 10^9,
-  log -> False}, Options@ConstructBareBasis ,
+  log -> False}, Options@ConstructCFIByFakeDim ,
   Options@AuxConstructIdenticalColorBasis] // DeleteDuplicates;
-ConstructIndependentColoredBasis[spins_List, operDim_Integer,
-  su3ShapeList_ : {},
-  identicalParam_ : {},
-  opts : OptionsPattern[]
-] := ConstructIndependentColoredBasis[
-  ConstructBareBasis[spins, operDim, FilterRules[{opts}, Options@ConstructBareBasis]],
-  su3ShapeList, identicalParam, opts];
-ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Association},
-  {},
-  identicalParam_ : {},
-  opts : OptionsPattern[]
-] := ConstructIndependentBasis[result, identicalParam, FilterRules[{opts}, Options@ConstructIndependentBasis]];
-ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Association},
+ConstructIndependentColoredBasis[spins_List, physicalDim_Integer,
   su3ShapeList_ : {},
   identicalParam_ : {},
   opts : OptionsPattern[]
 ] := Module[
-  {spins, identicalList,
-    colorIndDict, colorBasis, colorIdenticalOpDict,
-    phyOperatorDict, exprDict, GetIndependentBasisByTotalOp, GetTotalOperator,
-    GetColoredCfBasis, CombineOpDict, coloredPhyOperatorDict
+  {
+    identicalList, TimingTest, fakeDimList, fakeDimResult,
+    colorIndDict, colorBasis, colorIdenticalOpDict, exprDict, fakeDimBasis
   },
+  TimingTest[message_] := (# // AbsoluteTiming //
+      (If[OptionValue@log, LogPri[message, #[[1]]];];#[[2]])&)&;
+
+  (*Construct Lorentz*)
+  fakeDimList = CalcNeededFakeDim[spins, physicalDim, OptionValue@mass];
+  If[OptionValue@log, LogPri["physical dim ", physicalDim, " involves fake dim ", fakeDimList];];
+  If[Length@fakeDimList === {}, Return[{}]];
+  fakeDimResult = Association@Table[fd -> ConstructCFIByFakeDim[spins, fd, FilterRules[{opts},
+    Options@ConstructCFIByFakeDim]], {fd, fakeDimList}] // TimingTest["construct fake basis cost "];
 
   (*Basis info*)
-  spins = data["metaInfo"]["spins"];
   If[identicalParam === {},
     identicalList = {},
     identicalList = (# ~ Append ~ If[OddQ[2 * spins[[#[[1]]]]], "A", "S"])& /@ identicalParam;
   ];
 
-  (*Calc Lorentz Permutation*)
-  phyOperatorDict = CalcPermutationMatrixDict[result, identicalList];
-  If[phyOperatorDict === {}, Return[{}]];
-
   (*Calc Color Permutation*)
   {colorIndDict, colorBasis, colorIdenticalOpDict} =
       AuxConstructIdenticalColorBasis[su3ShapeList, identicalList,
-        OptionValue@ythead, FilterRules[{opts}, Options@AuxConstructIdenticalColorBasis]];
-
+        OptionValue@ythead, FilterRules[{opts}, Options@AuxConstructIdenticalColorBasis]] //
+          TimingTest["construct color basis cost "];
   If[OptionValue@log, LogPri["involved color basis ", Length@ colorBasis];];
+
+  exprDict = GetTotalPermutedPolyDict[identicalList];
+
+  fakeDimBasis = Table[AuxConstructIdenticalColorBasisByFakeDim[
+    fakeDimResult[fd], physicalDim,
+    colorIndDict, colorBasis, colorIdenticalOpDict,
+    exprDict, identicalList,
+    FilterRules[{opts}, Options@AuxConstructIdenticalColorBasisByFakeDim]
+  ], {fd, fakeDimList}] // TimingTest["calc identical total cost: "];
+
+  If[OptionValue@log, LogPri["fake dim ", fakeDimList, " contribute ", Length /@ fakeDimBasis]];
+  Return[fakeDimBasis // Flatten[#, 1]&];
+];
+
+Options[AuxConstructIdenticalColorBasisByFakeDim] = Options[CalcPermutationMatrixDictByFakeDim];
+AuxConstructIdenticalColorBasisByFakeDim[
+  result : {icfs_, data_}, phyDim_,
+  colorIndDict_, colorBasis_, colorIdenticalOpDict_,
+  exprDict_, identicalList_, opts : OptionsPattern[]
+] := Module[
+  {separatedOperatorDict, phyOperatorDict, GetColoredCfBasis, CombineOpDict,
+    coloredPhyOperatorDict, GetTotalOperator, GetIndependentBasisByTotalOp},
+  (*Calc Lorentz Permutation*)
+  separatedOperatorDict = CalcPermutationMatrixDictByFakeDim[result, identicalList, opts];
+  If[!KeyExistsQ[separatedOperatorDict, phyDim], Return[{}]];
+  phyOperatorDict = separatedOperatorDict[phyDim];
 
   (*Special: Self color cancel*)
   If[Length@colorBasis == 0,
     If[OptionValue@log, LogPri["Cancel color"];];
     Return[{}]];
-
   (*Expand basis*)
   GetColoredCfBasis[cfs_] := Table[{color, amp}, {color, colorBasis}, {amp, cfs}] // Flatten[#, 1]&;
-
   (*Special: no identical*)
   If[identicalList === {},
-    Return[GetColoredCfBasis[phyOperatorDict[[1]][[1]]]];
+    Return[GetColoredCfBasis[phyOperatorDict[[1]]]];
   ];
 
   (*Combine color and amp*)
-  exprDict = GetTotalPermutedPolyDict[identicalList];
   CombineOpDict[cOpD_, lOpD_] := Block[{cOpDict = cOpD, ToIdentity, temp},
     If[Length@cOpDict =!= Length@lOpD,
       ToIdentity[rule_] := rule[[1]] -> IdentityMatrix[Length@colorBasis];
@@ -268,13 +282,14 @@ ConstructIndependentColoredBasis[result : {cfBasisCoordinates_List, data_Associa
   ];
   CombineOpDict[lOpD_] := CombineOpDict[colorIdenticalOpDict, lOpD];
   coloredPhyOperatorDict = {
-    GetColoredCfBasis[#[[1]]], CombineOpDict[#[[2]]]
-  }& /@ phyOperatorDict;
+    GetColoredCfBasis[phyOperatorDict[[1]]], CombineOpDict[phyOperatorDict[[2]]]
+  };
 
+  (*Find independent parts*)
   GetTotalOperator[opDict_] := Dot @@ Table[exprDict[id] /. opDict[id], {id, identicalList}];
   GetIndependentBasisByTotalOp[{basis_, opDict_}] :=
       basis[[#]]& /@ FindIndependentBasisPos[Transpose@GetTotalOperator[opDict]];
-  GetIndependentBasisByTotalOp /@ coloredPhyOperatorDict // Flatten[#, 1]& // Return;
+  GetIndependentBasisByTotalOp @ coloredPhyOperatorDict // Return;
 ];
 
 Options[AuxConstructIdenticalColorBasis] := {log -> False};
