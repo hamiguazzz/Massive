@@ -119,7 +119,7 @@ InnerConstructAmp[spins_, antispinors_, np_, ampDim_, masses_] :=
 (*  ab[i_, l_]^m_ * ab[j_, k_]^n_ /; Signature[{i, j}] > 0 && Signature[{k, l}] > 0*)
 (*      :> ab[i, l]^(m - 1) ab[j, k]^(n - 1) (-ab[i, j]ab[k, l] + ab[i, k]ab[j, l])};*)
 (*ruleSchSMLL = ruleSchAMLL /. ab -> sb;*)
-s[i_, j_] := ab[i, j] sb[j, i];
+MandelstamS[i_, j_] := ab[i, j] sb[j, i];
 ruleP1[Num_] := {
   sb[1, i_] ab[1, j_] :>
       Sum[-sb[k, i] ab[k, j], {k, 2, Num}],
@@ -165,16 +165,16 @@ ruleP2[Num_] := {
   (*~Join~{-sb[2,3]^(m-1) ab[1,3]^(n-1)esb[2]ab[1,2],-sb[2,3]^(m-1) ab[1,3]^(n-1)sb[2,1]eab[1]}*)
 };
 ruleP3[Num_] := {sb[2, 3] ab[2, 3] :>
-    Sum[s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
+    Sum[MandelstamS[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
   sb[2, 3]^m_ ab[2, 3] :>
       sb[2, 3]^(m - 1) Sum[
-        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
+        MandelstamS[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
   sb[2, 3] ab[2, 3]^n_ :>
       ab[2, 3]^(n - 1) Sum[
-        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
+        MandelstamS[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}],
   sb[2, 3]^m_ ab[2, 3]^n_ :>
       sb[2, 3]^(m - 1) ab[2, 3]^(n - 1) Sum[
-        s[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}]};
+        MandelstamS[i, j], {i, 2, Num}, {j, Max[i + 1, 4], Num}]};
 ruleSchA = {ab[i_, l_] ab[j_, k_] /;
     i < j < k < l :> (-ab[i, j] ab[k, l] + ab[i, k] ab[j, l]),
   ab[i_, l_]^m_ ab[j_, k_] /; i < j < k < l :>
