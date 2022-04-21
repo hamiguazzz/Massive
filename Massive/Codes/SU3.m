@@ -297,7 +297,7 @@ AuxConstructIdenticalColorBasis[su3ShapeList_, identicalParm_, h_, OptionsPatter
   {colorIndDict, identicalList = {}, maxInd,
     colorBasis, rulesIdentical, rulesInnerDict, ParaFindRuleMatrix,
     ruleIdenticalCoorsDict,
-    ruleInnerCoorsDict, colorIdenticalOpDict, colorInnerOpDict, independentPosListX,
+    ruleInnerCoorsDict, colorIdenticalOpDict, colorInnerOpDict, independentPosList,
     projectionOp, proL, proR, metricInvG},
   If[Sort@Keys@su3ShapeDict =!=
       Sort@DeleteDuplicates[su3ShapeList ~ Join ~ Keys@su3ShapeDict],
@@ -335,10 +335,10 @@ AuxConstructIdenticalColorBasis[su3ShapeList_, identicalParm_, h_, OptionsPatter
   (
     colorInnerOpDict = GetColorInnerPermutedOperatorDict[colorIndDict, ruleInnerCoorsDict[#]&];
     projectionOp = GetProjectInnerColorOp[colorIndDict, colorInnerOpDict];
-    independentPosListX = FindIndependentBasisPos[projectionOp];
-    If[Length@independentPosListX == 0, Return@{colorIndDict, {}, <||>}];
-    proL = projectionOp[[independentPosListX]];
-    proR = Transpose @ proL;
+    independentPosList = FindIndependentBasisPos[Transpose@projectionOp];
+    If[Length@independentPosList == 0, Return@{colorIndDict, {}, <||>}];
+    proR = projectionOp[[;;, independentPosList]];
+    proL = Transpose @ proR;
     metricInvG = Inverse[proL.proR];
   ) // AbsoluteTiming // (If[OptionValue@log, LogPri["project color basis cost ", #[[1]]]];)&;
 
@@ -350,5 +350,5 @@ AuxConstructIdenticalColorBasis[su3ShapeList_, identicalParm_, h_, OptionsPatter
   colorIdenticalOpDict = GetColorIdenticalPermutedOperatorDict[identicalList, colorIndDict,
     ruleIdenticalCoorsDict[#]&];
 
-  Return[{colorIndDict, colorBasis[[independentPosListX]], colorIdenticalOpDict}]
+  Return[{colorIndDict, colorBasis[[independentPosList]], colorIdenticalOpDict}]
 ];

@@ -10,7 +10,7 @@ Print["Loading MassiveBasis..."];
 {Sum2List, Prod2List};
 {ClearCache};
 
-If[!BooleanQ[$MassiveVerbose],$MassiveVerbose = False;];
+If[!BooleanQ[$MassiveVerbose], $MassiveVerbose = False;];
 LogPri[mess___] := If[$MassiveVerbose, Print[mess]];
 
 If[!Global`$DEBUG, Begin["`Private`"]];
@@ -22,12 +22,14 @@ ImportModel[FileNameJoin[{$MassiveDir, "Model", "default.json"}]];
 
 (*Add cache*)
 ClearCache[];
-$MassiveCachedFunction = {
-  ConstructCFIByFakeDim,
-  CalcPermutationMatrixDictByFakeDim,
-  ConstructIndependentBasis,
-  AuxConstructIdenticalColorBasis,
-  ConstructIndependentColoredBasis};
+If[! ListQ@$MassiveCachedFunction,
+  $MassiveCachedFunction = {
+    ConstructCFIByFakeDim,
+    CalcPermutationMatrixDictByFakeDim,
+    ConstructIndependentBasis,
+    AuxConstructIdenticalColorBasis,
+    ConstructIndependentColoredBasis};
+];
 CacheFunction[$MassiveCachedFunction];
 
 If[!Global`$DEBUG, EndPackage[]];

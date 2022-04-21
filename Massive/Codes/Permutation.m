@@ -379,22 +379,25 @@ ConstructIndependentBasis[spins_List, physicalDim_Integer, identical_ : {}, opts
   If[Length@fakeDimList === {}, Return[{}]];
   fakeDimResult = Association@Table[fd -> ConstructCFIByFakeDim[spins, fd, FilterRules[{opts},
     Options@ConstructCFIByFakeDim]], {fd, fakeDimList}] // TimingTest["construct fake basis cost "];
+  Print[fakeDimResult];
   fakeDimBasis = Table[AuxConstructIndependentBasisByFakeDim[fakeDimResult[fd], physicalDim, identicalList, exprDict],
     {fd, fakeDimList}] // TimingTest["calc identical fake basis cost "];
+  Print[fakeDimBasis];
   If[OptionValue@log, LogPri["fake dim ", fakeDimList, " contribute ", Length /@ fakeDimBasis]];
   Return[fakeDimBasis // Flatten];
 ];
 Options[AuxConstructIndependentBasisByFakeDim] = Options[CalcPermutationMatrixDictByFakeDim];
 AuxConstructIndependentBasisByFakeDim[result : {icfs_, data_}, phyDim_, identicalList_, exprDict_,
   opts : OptionsPattern[]] := Module[
-  {phyOperatorDict, separatedOperatorDict,
-    GetTotalOperator, GetIndependentBasisByTotalOp},
+  {phyOperatorDict, separatedOperatorDict, totalOp},
   separatedOperatorDict = CalcPermutationMatrixDictByFakeDim[result, identicalList, opts];
   If[!KeyExistsQ[separatedOperatorDict, phyDim], Return[{}]];
   phyOperatorDict = separatedOperatorDict[phyDim];
-  GetTotalOperator[opDict_] := Dot @@ Table[exprDict[id] /. opDict[id], {id, identicalList}];
-  GetIndependentBasisByTotalOp[{basis_, <||>}] := basis;
-  GetIndependentBasisByTotalOp[{basis_, opDict_?(Length@# > 0&)}] :=
-      basis[[#]]& /@ FindIndependentBasisPos[Transpose@GetTotalOperator[opDict]];
-  GetIndependentBasisByTotalOp @ phyOperatorDict // Flatten // Return;
+  totalOp = If[
+    phyOperatorDict[[2]] =!= <||>,
+    Dot @@ Table[exprDict[id] /. opDict[id], {id, identicalList}],
+    IdentityMatrix[Length@phyOperatorDict[[1]]]
+  ];
+  Print[totalOp];
+  phyOperatorDict[[1]][[#]]& /@ FindIndependentBasisPos[Transpose@totalOp] // Flatten // Return;
 ];

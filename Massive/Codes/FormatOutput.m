@@ -26,6 +26,9 @@ ExportAmp2Tex[l_List, abkFun_, sbkFun_] := ExportAmp2Tex[#, abkFun, sbkFun]& /@ 
 ExportAmp2Tex[expr_Times, abkFun_, sbkFun_] := StringJoin@ExportAmp2Tex[Prod2List[expr], abkFun, sbkFun];
 ExportAmp2Tex[expr_Plus, abkFun_, sbkFun_] := ExportAmp2Tex[Sum2List@expr, abkFun, sbkFun] // StringRiffle[#, "+"]&;
 ExportAmp2Tex[expr_] := ExportAmp2Tex[expr, defaultAbkFun, defaultSbkFun];
+ExportAmpMassive2Tex[np_Integer]:=ExportAmp2Tex[ReplaceBraNumber[
+  Table[(2*np+1-i)->ToString@i<>"^{\prime}",{i,1,np}]
+][#]]&;
 
 (*Label Section*)
 (*Lorentz Label start with "LI"*)
