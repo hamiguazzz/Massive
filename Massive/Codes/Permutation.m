@@ -395,9 +395,8 @@ AuxConstructIndependentBasisByFakeDim[result : {icfs_, data_}, phyDim_, identica
   phyOperatorDict = separatedOperatorDict[phyDim];
   totalOp = If[
     phyOperatorDict[[2]] =!= <||>,
-    Dot @@ Table[exprDict[id] /. opDict[id], {id, identicalList}],
+    Dot @@ Table[exprDict[id] /. phyOperatorDict[[2]][id], {id, identicalList}],
     IdentityMatrix[Length@phyOperatorDict[[1]]]
   ];
-  Print[totalOp];
   phyOperatorDict[[1]][[#]]& /@ FindIndependentBasisPos[Transpose@totalOp] // Flatten // Return;
 ];
