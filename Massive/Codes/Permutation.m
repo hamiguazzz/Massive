@@ -379,10 +379,10 @@ ConstructIndependentBasis[spins_List, physicalDim_Integer, identical_ : {}, opts
   If[Length@fakeDimList === {}, Return[{}]];
   fakeDimResult = Association@Table[fd -> ConstructCFIByFakeDim[spins, fd, FilterRules[{opts},
     Options@ConstructCFIByFakeDim]], {fd, fakeDimList}] // TimingTest["construct fake basis cost "];
-  Print[fakeDimResult];
+(*  Print[fakeDimResult];*)
   fakeDimBasis = Table[AuxConstructIndependentBasisByFakeDim[fakeDimResult[fd], physicalDim, identicalList, exprDict],
     {fd, fakeDimList}] // TimingTest["calc identical fake basis cost "];
-  Print[fakeDimBasis];
+(*  Print[fakeDimBasis];*)
   If[OptionValue@log, LogPri["fake dim ", fakeDimList, " contribute ", Length /@ fakeDimBasis]];
   Return[fakeDimBasis // Flatten];
 ];
