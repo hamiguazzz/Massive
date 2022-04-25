@@ -18,7 +18,8 @@ modelDefaultProperties = <|
   "field strength name" -> "",
   "mass" -> 0,
   "color" -> "",
-  "charge" -> 0
+  "charge" -> 0,
+  "antiparticle" -> False
 |>;
 
 ImportModel[fileName_String] := Module[{
@@ -68,7 +69,8 @@ ImportModel[fileName_String] := Module[{
 (*TODO deliver options*)
 Options[BasisByModel] := {output -> "tex", log -> False};
 BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Module[
-  {particles, massivePos, masslessPos, np, spins, masses, colors, charges, identicalList,
+  {particles, massivePos, masslessPos, np, spins, masses,
+    antiparticles, colors, charges, identicalList,
     externalDict, currentBasis, currentResult, resultDict},
   particles = Sort[particlesParm];
   If[Length@particles < 4 || Or @@ (!KeyExistsQ[$currentModel, #]& /@ particles),
@@ -100,9 +102,12 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
         {$currentModel[particles[[i]]]["field name"], $currentModel[particles[[i]]]["field strength name"]}
       ]
     , {i, Length@particles}];
+  antiparticles = Table[If[
+    $currentModel[particles[[i]]]["antiparticle"],
+    i ,Missing[]], {i, Length@particles}]//DeleteMissing;
 
   If[OptionValue@log, LogPri["Spin:", spins, "\n", "Mass:", masses, "\n", "Color:", colors, "\n",
-    "Identical:", identicalList, "\n", "Field:", externalDict];];
+    "Identical:", identicalList, "\n", "Field:", externalDict, "\n", "Antiparticles", antiparticles];];
 
   Do[
     currentBasis = {};
@@ -112,7 +117,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
         "amplitude" | "amp", currentResult,
         "operator" | "op", Amp2WeylOp[np, mass -> masses] /@ currentResult,
         (*TODO feyncalc*)
-        "tex" | "latex", ExportSpinorObj2Tex[#, external -> externalDict] & /@
+        "tex" | "latex", ExportSpinorObj2Tex[#, external -> externalDict, antiPaticleList-> antiparticles] & /@
             Amp2WeylOp[np, mass -> masses] /@ currentResult,
         _, Null
       ];
@@ -122,7 +127,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
         "amplitude" | "amp", currentResult,
         "operator" | "op", Amp2WeylOp[np, colorType -> colors, mass -> masses] /@ currentResult,
         (*TODO feyncalc*)
-        "tex" | "latex", ExportSpinorObj2Tex[#, external -> externalDict] & /@
+        "tex" | "latex", ExportSpinorObj2Tex[#, external -> externalDict, antiPaticleList-> antiparticles] & /@
             Amp2WeylOp[np, colorType -> colors, mass -> masses] /@ currentResult,
         _, Null
       ];

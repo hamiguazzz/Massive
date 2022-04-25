@@ -91,6 +91,7 @@ GenSection@{"u", "ubar", "u", "ubar"};
 
 (*charge -1/3*3+1*)
 GenSection@{"d", "d", "d", "e+"};
+GenSection@{"dbar", "dbar", "dbar", "e-"};
 
 (*1,1/2,1/2,0*)
 dimFrom = 5;
