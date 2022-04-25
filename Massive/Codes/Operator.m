@@ -505,6 +505,7 @@ sortSpinorIndex[opListIn_, np_Integer, OptionsPattern[]] :=
         loopi++
       ];
       loopi = 1;
+
       If[Length[opList] != 0, (*circle case*)
 
         While[Length[opList] != 0,
@@ -522,7 +523,8 @@ sortSpinorIndex[opListIn_, np_Integer, OptionsPattern[]] :=
               Goto[circleEnd]
             ];
             If[opList[[loopj]][[-1]] == outList[[-1]][[-1]],
-              AppendTo[outList, sigmaSwitch[opList[[loopj]]]];
+(*              AppendTo[outList, sigmaSwitch[opList[[loopj]]]];*)
+              AppendTo[outList, opList[[loopj]]];
               opList = Delete[opList, loopj];
               loopj = 1;
               Goto[circleEnd]
