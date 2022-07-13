@@ -6,17 +6,21 @@ LogPri["ThreePoints loaded"];
 (*$$Require$$ ReplaceBraNumber, MassOption, ab, sb*)
 bL = ab;
 bLT = sb;
+Reduce3Pt[amp_] := Module[{rule = ruleP1[3]},
+  Return[amp /. rule];
+];
 Options@Construct3PBasis = {mass -> All};
 Construct3PBasis[spins : {s1_, s2_, s3_}, OptionsPattern[]] :=
-    Module[{massOp = MassOption[OptionValue@mass, 3], zeroPos,nonZeroPos, sortedS, f, rule, re},
+    Module[{massOp = MassOption[OptionValue@mass, 3], zeroPos, nonZeroPos, sortedS, f, rule, re},
       zeroPos = If[KeyExistsQ[#, 0], #[0], {}] &[PositionIndex@massOp];
       nonZeroPos = Complement[Range[3], zeroPos];
-      If[Length@zeroPos===3,Return[{}]];
+      If[Length@zeroPos === 3, Return[{}]];
       f = Switch[Length@zeroPos, 0, Gen3L, 1, Gen1H2LUE, 2, Gen2H1L];
       sortedS = spins[[zeroPos]] ~ Join ~ spins[[nonZeroPos]];
-      rule = Table[i->zeroPos[[i]],{i,Length@zeroPos}]~Join~Table[j+Length@zeroPos->nonZeroPos[[j]],{j,Length@nonZeroPos}];
+      rule = Table[i -> zeroPos[[i]], {i, Length@zeroPos}] ~ Join ~ Table[j + Length@zeroPos -> nonZeroPos[[j]], {j, Length@nonZeroPos}];
       re = f[sortedS];
       re = If[Head@sortedS === List, ReplaceBraNumber[rule] /@ re, {}];
+      re = Reduce3Pt /@ re // DeleteCases[0];
       Return[re];
     ];
 
@@ -36,6 +40,7 @@ Gen2H1L[spins : {h1_, h2_, s_}] /;
       p2 = bLT[1, 2]^v2;
       amp = p1 * p2;
       (*    If[exchangeFlag, amp = ReplaceBraNumber[{1->2,2->1}][amp];];*)
+      amp = Reduce3Pt /@ amp // DeleteCases[0];
       Return@{amp};
     ];
 
@@ -76,6 +81,7 @@ Gen1H2LUE[spins : {h_, s1_, s2_}] /;
       (*recovery*)
       (*      amp = ReplaceBraNumber[{5 -> 2}] /@ amp ;*)
       amp = ReplaceBraNumber[{5 -> 2}] /@ amp // DeleteCases[___ * Power[_, i_] /; i < 0];
+      amp = Reduce3Pt /@ amp // DeleteCases[0];
       Return[amp];
     ];
 
@@ -84,7 +90,7 @@ Gen3L[spins : {s1_, s2_, s3_}] /;
         And @@ (# >= 0& /@ spins) &&
         IntegerQ@(Plus @@ spins) :=
     Module[{p1, p2, mrules, frules, ReduceAmp,
-      Gen1, Gen2, ps, ps2, amps1, amps2},
+      Gen1, Gen2, ps, ps2, amps1, amps2, re},
       (*4,5 as Temp; 6,7 as Temp; 11,12,13 as massive 1,2,3*)
       p1 = bL[1, 4] * bL[2, 5] * bLT[1, 2];
       p2 = bL[6, 7];
@@ -111,6 +117,7 @@ Gen3L[spins : {s1_, s2_, s3_}] /;
       ps2 = {Sort[#[[1 ;; s1 + s2 + s3 - 1]]], Sort[#[[s1 + s2 + s3 ;; -3]]], Sort[#[[-2 ;; -1]]]}& /@ ps //
           DeleteDuplicates // DeleteCases[{_, _, {i_, j_}} /; i == j];
       amps2 = Gen2 /@ ps2;
-
-      Return[(Last@FactorizeBracket@#&) /@ Join[amps1, amps2]];
+      re = Reduce3Pt /@ re // DeleteCases[0];
+      re = (Last@FactorizeBracket@#&) /@ Join[amps1, amps2] // DeleteDuplicates;
+      Return[re];
     ];
