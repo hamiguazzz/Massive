@@ -121,3 +121,47 @@ Gen3L[spins : {s1_, s2_, s3_}] /;
       re = (Last@FactorizeBracket@#&) /@ Join[amps1, amps2] // DeleteDuplicates;
       Return[re];
     ];
+
+(* Check method ref:Dong*)
+
+Check3PointCheckAmount[spins : {s1_, s2_, s3_}, OptionsPattern[]] :=
+    Module[{massOp = MassOption[OptionValue@mass, 3], zeroPos, nonZeroPos, sortedS, f, rule, re},
+      zeroPos = If[KeyExistsQ[#, 0], #[0], {}] &[PositionIndex@massOp];
+      nonZeroPos = Complement[Range[3], zeroPos];
+      If[Length@zeroPos === 3, Return[{}]];
+      f = Switch[Length@zeroPos, 0, CheckAmount3L, 1, CheckAmount1H2LUE, 2, CheckAmount2H1L];
+      sortedS = spins[[zeroPos]] ~ Join ~ spins[[nonZeroPos]];
+      re = f[sortedS];
+      Return@re;
+    ];
+
+CheckAmount2H1L[spins : {h1_, h2_, s_}] := With[
+  If[!(And @@ (IntegerQ /@ (2 * spins)) &&
+      s >= 0 &&
+      IntegerQ@(Plus @@ spins)), Return[0]];
+  If[s < Abs[h1 - h2],
+    Return[0],
+    Return[1]];
+];
+
+CheckAmount1H2LUE[spins : {h_, s1_, s2_}] := With[
+  If[!(And @@ (IntegerQ /@ (2 * spins)) &&
+      s1 >= 0 && s2 >= 0 &&
+      IntegerQ@(Plus @@ spins)), Return[0]];
+  If[Abs[h] > s1 + s2, Return@0];
+  If[Abs[h] <= s1 + s2 && Abs[h] >= Abs[s1 - s2], Return@(s1 + s2 - Abs@h + 1)];
+  If[Abs[h] < Abs[s1 - s2], Return@(2 * Min[s1, s2] + 1)];
+];
+
+CheckAmount3L[spins : {s1_, s2_, s3_}] := Module[
+  {p},
+  If[!(And @@ (IntegerQ /@ (2 * spins)) &&
+      And @@ (# >= 0& /@ spins) &&
+      IntegerQ@(Plus @@ spins)), Return@0];
+  spins = Sort@spins;
+  p = Max[s1 + s2 - s3, 0];
+  Return[(2 * s1 + 1) * (2 * s2 + 1) - p * (p + 1)];
+];
+
+
+(*Construction method ref:Dong*)
