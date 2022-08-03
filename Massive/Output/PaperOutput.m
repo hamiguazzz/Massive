@@ -16,7 +16,7 @@ GenSection[particles_] :=
       heading -> "\\section{Type:" <> StringJoin @@ particles <> "}\n\n",
       exportPath ->
           FileNameJoin[{$MassiveDir, "Output",
-            ToString[$currentModel[#]["spin"] & /@ particles // Total],
+            ToString[Abs[$currentModel[#]["spin"]] & /@ particles // Total],
             "result_" <> StringJoin @@ particles <> ".txt"}]] //
         ExpandFileName;
 
@@ -45,7 +45,7 @@ GenSection@{"u", "ubar", "h", "h"};
 dimFrom = 6;
 GenSection@{"Z", "h", "h", "h"};
 (*GenSection@{"g", "h", "h", "h"};*)
-GenSection@{"gamma", "h", "h", "h"};
+GenSection@{"gamma+", "h", "h", "h"};
 
 
 
@@ -57,10 +57,12 @@ GenSection@{"gamma", "h", "h", "h"};
 dimFrom = 4;
 GenSection@{"Z", "Z", "h", "h"};
 (*GenSection@{"Z", "g", "h", "h"};*)
-GenSection@{"Z", "gamma", "h", "h"};
-GenSection@{"g", "g", "h", "h"};
+GenSection@{"Z", "gamma+", "h", "h"};
+GenSection@{"g+", "g+", "h", "h"};
+GenSection@{"g+", "g-", "h", "h"};
 (*GenSection@{"g", "gamma", "h", "h"};*)
-GenSection@{"gamma", "gamma", "h", "h"};
+GenSection@{"gamma+", "gamma+", "h", "h"};
+GenSection@{"gamma+", "gamma-", "h", "h"};
 GenSection@{"W+", "W-", "h", "h"};
 
 (*1/2,1/2,1/2,1/2*)
@@ -95,18 +97,18 @@ GenSection@{"dbar", "dbar", "dbar", "e-"};
 
 (*1,1/2,1/2,0*)
 dimFrom = 5;
-GenSection@{"gamma", "ve", "vmu", "h"};
+GenSection@{"gamma+", "ve", "vmu", "h"};
 GenSection@{"Z", "ve", "vmu", "h"};
 (*GenSection@{"g", "ve", "vmu", "h"};*)
-GenSection@{"gamma", "ve", "ve", "h"};
+GenSection@{"gamma+", "ve", "ve", "h"};
 GenSection@{"Z", "ve", "ve", "h"};
 (*GenSection@{"g", "ve", "ve", "h"};*)
 
-GenSection@{"gamma", "e-", "e+", "h"};
+GenSection@{"gamma+", "e-", "e+", "h"};
 GenSection@{"Z", "e-", "e+", "h"};
 (*GenSection@{"g", "e-", "e+", "h"};*)
 
-GenSection@{"gamma", "u", "ubar", "h"};
+GenSection@{"gamma+", "u", "ubar", "h"};
 GenSection@{"Z", "u", "ubar", "h"};
 (*GenSection@{"g", "u", "ubar", "h"};*)
 
@@ -118,19 +120,26 @@ GenSection@{"Z", "u", "ubar", "h"};
 (*1,1,1,0*)
 dimFrom = 4;
 GenSection@{"Z", "Z", "Z", "h"};
-GenSection@{"g", "g", "g", "h"};
-GenSection@{"gamma", "gamma", "gamma", "h"};
+GenSection@{"g+", "g+", "g+", "h"};
+GenSection@{"g+", "g+", "g-", "h"};
+GenSection@{"gamma+", "gamma+", "gamma+", "h"};
+GenSection@{"gamma+", "gamma+", "gamma-", "h"};
 
-GenSection@{"Z", "Z", "gamma", "h"};
-GenSection@{"Z", "gamma", "gamma", "h"};
+GenSection@{"Z", "Z", "gamma+", "h"};
+GenSection@{"Z", "gamma+", "gamma+", "h"};
+GenSection@{"Z", "gamma+", "gamma-", "h"};
 (*GenSection@{"Z", "Z", "g", "h"};*)
-GenSection@{"Z", "g", "g", "h"};
-GenSection@{"g", "g", "gamma", "h"};
+GenSection@{"Z", "g+", "g+", "h"};
+GenSection@{"Z", "g+", "g-", "h"};
+GenSection@{"g+", "g+", "gamma+", "h"};
+GenSection@{"g+", "g-", "gamma+", "h"};
+GenSection@{"Z", "g+", "g+", "h"};
+GenSection@{"Z", "g+", "g-", "h"};
 (*GenSection@{"g", "gamma", "gamma", "h"};*)
 
 GenSection@{"W+", "W-", "Z", "h"};
 (*GenSection@{"W+", "W-", "g", "h"};*)
-GenSection@{"W+", "W-", "gamma", "h"};
+GenSection@{"W+", "W-", "gamma+", "h"};
 (*GenSection@{"Z", "g", "gamma", "h"};*)
 
 (*1,1,1/2,1/2*)
@@ -139,23 +148,31 @@ GenSection@{"Z", "Z", "ve", "vmu"};
 GenSection@{"Z", "Z", "ve", "ve"};
 GenSection@{"Z", "Z", "e-", "e+"};
 GenSection@{"Z", "Z", "u", "ubar"};
-GenSection@{"gamma", "gamma", "ve", "vmu"};
-GenSection@{"gamma", "gamma", "ve", "ve"};
-GenSection@{"gamma", "gamma", "e-", "e+"};
-GenSection@{"gamma", "gamma", "u", "ubar"};
-GenSection@{"g", "g", "ve", "vmu"};
-GenSection@{"g", "g", "ve", "ve"};
-GenSection@{"g", "g", "e-", "e+"};
-GenSection@{"g", "g", "u", "ubar"};
+GenSection@{"gamma+", "gamma+", "ve", "vmu"};
+GenSection@{"gamma+", "gamma-", "ve", "vmu"};
+GenSection@{"gamma+", "gamma+", "ve", "ve"};
+GenSection@{"gamma+", "gamma-", "ve", "ve"};
+GenSection@{"gamma+", "gamma+", "e-", "e+"};
+GenSection@{"gamma+", "gamma-", "e-", "e+"};
+GenSection@{"gamma+", "gamma+", "u", "ubar"};
+GenSection@{"gamma+", "gamma-", "u", "ubar"};
+GenSection@{"g+", "g+", "ve", "vmu"};
+GenSection@{"g+", "g-", "ve", "vmu"};
+GenSection@{"g+", "g+", "ve", "ve"};
+GenSection@{"g+", "g-", "ve", "ve"};
+GenSection@{"g+", "g+", "e-", "e+"};
+GenSection@{"g+", "g-", "e-", "e+"};
+GenSection@{"g+", "g+", "u", "ubar"};
+GenSection@{"g+", "g-", "u", "ubar"};
 
 (*GenSection@{"Z", "g", "ve", "vmu"};*)
 (*GenSection@{"Z", "g", "ve", "ve"};*)
 (*GenSection@{"Z", "g", "e-", "e+"};*)
 (*GenSection@{"Z", "g", "u", "ubar"};*)
-GenSection@{"Z", "gamma", "ve", "vmu"};
-GenSection@{"Z", "gamma", "ve", "ve"};
-GenSection@{"Z", "gamma", "e-", "e+"};
-GenSection@{"Z", "gamma", "u", "ubar"};
+GenSection@{"Z", "gamma+", "ve", "vmu"};
+GenSection@{"Z", "gamma+", "ve", "ve"};
+GenSection@{"Z", "gamma+", "e-", "e+"};
+GenSection@{"Z", "gamma+", "u", "ubar"};
 (*GenSection@{"g", "gamma", "ve", "vmu"};*)
 (*GenSection@{"g", "gamma", "ve", "ve"};*)
 (*GenSection@{"g", "gamma", "e-", "e+"};*)
@@ -177,23 +194,30 @@ GenSection@{"Z", "Z", "Z", "Z"};
 (*GenSection@{"gamma", "gamma", "gamma", "gamma"};*)
 
 (*GenSection@{"Z", "Z", "Z", "g"};*)
-GenSection@{"Z", "Z", "g", "g"};
-GenSection@{"Z", "g", "g", "g"};
-GenSection@{"Z", "Z", "Z", "gamma"};
-GenSection@{"Z", "Z", "gamma", "gamma"};
-GenSection@{"Z", "gamma", "gamma", "gamma"};
+GenSection@{"Z", "Z", "g+", "g+"};
+GenSection@{"Z", "Z", "g+", "g-"};
+GenSection@{"Z", "g+", "g+", "g+"};
+GenSection@{"Z", "g+", "g+", "g-"};
+GenSection@{"Z", "Z", "Z", "gamma+"};
+GenSection@{"Z", "Z", "gamma+", "gamma+"};
+GenSection@{"Z", "Z", "gamma+", "gamma-"};
+GenSection@{"Z", "gamma+", "gamma+", "gamma+"};
+GenSection@{"Z", "gamma+", "gamma+", "gamma-"};
 (*GenSection@{"g", "g", "g", "gamma"};*)
 (*GenSection@{"g", "g", "gamma", "gamma"};*)
 (*GenSection@{"g", "gamma", "gamma", "gamma"};*)
 
 (*GenSection@{"Z", "Z", "g", "gamma"};*)
-GenSection@{"g", "g", "Z", "gamma"};
+GenSection@{"g+", "g+", "Z", "gamma+"};
+GenSection@{"g+", "g-", "Z", "gamma+"};
 (*GenSection@{"gamma", "gamma", "Z", "g"};*)
 
 GenSection@{"W+", "W-", "W+", "W-"};
 GenSection@{"W+", "W-", "Z", "Z"};
-GenSection@{"W+", "W-", "g", "g"};
-GenSection@{"W+", "W-", "gamma", "gamma"};
+GenSection@{"W+", "W-", "g+", "g+"};
+GenSection@{"W+", "W-", "g+", "g-"};
+GenSection@{"W+", "W-", "gamma+", "gamma+"};
+GenSection@{"W+", "W-", "gamma+", "gamma-"};
 (*GenSection@{"W+", "W-", "Z", "g"};*)
-GenSection@{"W+", "W-", "Z", "gamma"};
+GenSection@{"W+", "W-", "Z", "gamma+"};
 (*GenSection@{"W+", "W-", "g", "gamma"};*)
