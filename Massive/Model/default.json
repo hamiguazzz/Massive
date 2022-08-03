@@ -171,6 +171,16 @@
     "field name": "A",
     "field strength name": "{F}"
   },
+  "gamma+": {
+    "spin": 1,
+    "field name": "A",
+    "field strength name": "{\\gamma}"
+  },
+  "gamma-": {
+    "spin": -1,
+    "field name": "A",
+    "field strength name": "{\\gamma}"
+  },
   "W+": {
     "spin": 1,
     "field name": "{(W^+)}",
@@ -193,6 +203,20 @@
   },
   "g": {
     "spin": 1,
+    "field name": "g",
+    "field strength name": "G",
+    "mass": 0,
+    "color": "g"
+  },
+  "g+": {
+    "spin": 1,
+    "field name": "g",
+    "field strength name": "G",
+    "mass": 0,
+    "color": "g"
+  },
+  "g-": {
+    "spin": -1,
     "field name": "g",
     "field strength name": "G",
     "mass": 0,

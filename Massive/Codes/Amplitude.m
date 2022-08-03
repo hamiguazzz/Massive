@@ -446,6 +446,9 @@ CalcPhysicalDim[spins_List, codeDim_Integer, antispinor__List, massParm_ : All] 
       If[#2 =!= 0 && #1 == 1 && #3 == 1, 1, 0]&,
       {spins, MassOption[massParm, Length@spins], antispinor}];
 
+ConstructCFIByFakeDim::BelowDim = "`1` Below minimal operator dimension `2` !";
+ConstructCFIByFakeDim::MismatchDim = "`1` is not match to `2` + 2n !";
+
 Options@ConstructCFIByFakeDim = Normal@Association@(Join @@ (Options /@
     {ConstructAmp, MatchCFDim, ReduceToBH}));
 ConstructCFIByFakeDim[spins_, fakeDim_, opts : OptionsPattern[]] :=
@@ -461,8 +464,10 @@ ConstructCFIByFakeDim[spins_, fakeDim_, opts : OptionsPattern[]] :=
       reduceOpts = FilterRules[{opts}, Options@ReduceToBH];
       dimFakeMinimal = np + Plus @@ Abs@spins;
 
-      If[fakeDim < dimFakeMinimal, Throw[{fakeDim, "Below minimal operator dimension!"}]];
-      If[OddQ[fakeDim - dimFakeMinimal], Throw[{fakeDim, "Wrong fake dimension!"}]];
+      If[fakeDim < dimFakeMinimal,
+        Message[ConstructCFIByFakeDim::BelowDim, fakeDim, dimFakeMinimal];Return[Null]];
+      If[OddQ[fakeDim - dimFakeMinimal],
+        Message[ConstructCFIByFakeDim::MismatchDim, fakeDim, dimFakeMinimal]; Return[Null]];
 
       TimingTest[message_] := (# // AbsoluteTiming //
           (If[OptionValue@log, LogPri[message, #[[1]]];];#[[2]])&)&;
@@ -490,7 +495,7 @@ ConstructCFIByFakeDim[spins_, fakeDim_, opts : OptionsPattern[]] :=
 
       If[Length[cfsDictReverse] == 0,
         If[Length@bhs == 0,
-          Throw["No such operator!"];,
+          Return[Null];,
           metaInfo = {"spins" -> spins, "fakeDim" -> fakeDim,
             "mass" -> masses, "opts" -> {opts}} // Association;
           Return[

@@ -70,7 +70,7 @@ FindPsiChain[amp_, np_Integer, OptionsPattern[]] := Module[
         If[spins[[index]] > 0,
           {ConstantArray[index, spins[[index]] * 2], {}}
           ,
-          {{}, ConstantArray[index, spins[[index]] * 2]}
+          {{}, ConstantArray[index, spins[[index]] * -2]}
         ]
         ,
         {ConstantArray[2 * np + 1 - index, spins[[index]] * 2 - antispinors[[index]]],

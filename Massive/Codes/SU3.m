@@ -216,7 +216,7 @@ ConstructIndependentColoredBasis[spins_List, physicalDim_Integer,
   If[OptionValue@log, LogPri["physical dim ", physicalDim, " involves fake dim ", fakeDimList];];
   If[Length@fakeDimList === {}, Return[{}]];
   fakeDimResult = Association@Table[fd -> ConstructCFIByFakeDim[spins, fd, FilterRules[{opts},
-    Options@ConstructCFIByFakeDim]], {fd, fakeDimList}] // TimingTest["construct fake basis cost "];
+    Options@ConstructCFIByFakeDim]], {fd, fakeDimList}] // DeleteCases[Null] // TimingTest["construct fake basis cost "];
 
   (*Basis info*)
   If[identicalParam === {},
@@ -238,7 +238,8 @@ ConstructIndependentColoredBasis[spins_List, physicalDim_Integer,
     colorIndDict, colorBasis, colorIdenticalOpDict,
     exprDict, identicalList,
     FilterRules[{opts}, Options@AuxConstructIdenticalColorBasisByFakeDim]
-  ], {fd, fakeDimList}] // TimingTest["calc identical total cost: "];
+  ], {fd, Keys@fakeDimResult}] // TimingTest["calc identical total cost: "];
+  (*The keys of fakeDimResult may be subset of fakeDimList because of some Null result from construction*)
 
   If[OptionValue@log, LogPri["fake dim ", fakeDimList, " contribute ", Length /@ fakeDimBasis]];
   Return[fakeDimBasis // Flatten[#, 1]&];

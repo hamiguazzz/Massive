@@ -29,7 +29,9 @@ ImportModel[fileName_String] := Module[{
   CheckSpin[spinIn_] := Switch[spinIn,
     0 | "0" | 0.0, 0,
     0.5 | N@0.5 | "0.5" | "1/2" | 1 / 2 , Rational[1, 2],
+    -0.5 | -N@0.5 | "-0.5" | "-1/2" | -1 / 2 , -Rational[1, 2],
     1 | "1" | 1.0, 1,
+    -1 | "-1" | -1.0, -1,
     _, Throw["No such spin"]
   ];
   CheckMass[massIn_] := Switch[massIn,
