@@ -14,6 +14,7 @@ $currentModel = <||>;
 SetSharedVariable[$currentModel];
 modelDefaultProperties = <|
   "spin" -> 0,
+  "particle name" -> "",
   "field name" -> "\\phi",
   "field strength name" -> "",
   "mass" -> 0,
@@ -61,6 +62,7 @@ ImportModel[fileName_String] := Module[{
   particlesDict = CheckProperty[particlesDict, "mass", CheckMass];
   particlesDict = CheckProperty[particlesDict, "spin", CheckSpin];
   particlesDict = CheckProperty[particlesDict, "charge", CheckCharge];
+  Do[If[particlesDict[p]["particle name"] == "", particlesDict[p]["particle name"] = p;];, {p, Keys@particlesDict}];
   $currentModel = particlesDict;
   Return[$currentModel];
 ];
@@ -69,7 +71,7 @@ ImportModel[fileName_String] := Module[{
 
 (*output mode: "amplitude", "operator", "feyncalc", "tex" *)
 (*TODO deliver options*)
-Options[BasisByModel] := {output -> "tex", log -> False};
+Options[BasisByModel] := {output -> "tex", log -> False, "form" -> String};
 BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Module[
   {particles, massivePos, masslessPos, np, spins, masses,
     antiparticles, colors, charges, identicalList,
@@ -106,7 +108,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
     , {i, Length@particles}];
   antiparticles = Table[If[
     $currentModel[particles[[i]]]["antiparticle"],
-    i ,Missing[]], {i, Length@particles}]//DeleteMissing;
+    i , Missing[]], {i, Length@particles}] // DeleteMissing;
 
   If[OptionValue@log, LogPri["Spin:", spins, "\n", "Mass:", masses, "\n", "Color:", colors, "\n",
     "Identical:", identicalList, "\n", "Field:", externalDict, "\n", "Antiparticles", antiparticles];];
@@ -119,7 +121,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
         "amplitude" | "amp", currentResult,
         "operator" | "op", Amp2WeylOp[np, mass -> masses] /@ currentResult,
         (*TODO feyncalc*)
-        "tex" | "latex", ExportSpinorObj2Tex[#, external -> externalDict, antiPaticleList-> antiparticles] & /@
+        "tex" | "latex", ExportSpinorObj2Tex[#, "form" -> OptionValue@"form", external -> externalDict, antiPaticleList -> antiparticles] & /@
             Amp2WeylOp[np, mass -> masses] /@ currentResult,
         _, Null
       ];
@@ -129,7 +131,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
         "amplitude" | "amp", currentResult,
         "operator" | "op", Amp2WeylOp[np, colorType -> colors, mass -> masses] /@ currentResult,
         (*TODO feyncalc*)
-        "tex" | "latex", ExportSpinorObj2Tex[#, external -> externalDict, antiPaticleList-> antiparticles] & /@
+        "tex" | "latex", ExportSpinorObj2Tex[#, "form" -> OptionValue@"form", external -> externalDict, antiPaticleList -> antiparticles] & /@
             Amp2WeylOp[np, colorType -> colors, mass -> masses] /@ currentResult,
         _, Null
       ];
@@ -171,3 +173,26 @@ OrganizeResultTexDict[texDict_?AssociationQ, OptionsPattern[]] := Module[
   ];
   Return[result];
 ];
+
+
+Options@BasisResultDict2JsonObj = {
+  "headWrap" -> Default,
+  "dimWrap" -> ("d" <> ToString@#&),
+  "equWrap" -> (#&)
+};
+BasisResultDict2JsonObj[particles_List, texDict_?AssociationQ, OptionsPattern[]] := Module[
+  {jsonObj = {}, head, dims, dimProps, nonOpDims = {}, fDim = OptionValue@"dimWrap", fEqu = OptionValue@"equWrap"},
+  (*Head*)
+  head = If[OptionValue@"headWrap" =!= Default, (OptionValue@"headWrap")[particles],
+    StringRiffle[$currentModel[#]["particle name"]&/@ particles, " "]
+  ];
+
+  dims = Keys@texDict;
+  nonOpDims = Select[dims, Length@texDict[#] == 0&];
+  dims = Complement[dims, nonOpDims];
+  AppendTo[jsonObj, "type" -> head];
+  AppendTo[jsonObj, "dimensions" -> dims];
+
+  Do[ AppendTo[jsonObj, fDim@d -> fEqu /@ texDict[d] ];, {d, dims}];
+  Return[jsonObj];
+]

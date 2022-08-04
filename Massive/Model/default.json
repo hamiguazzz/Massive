@@ -6,75 +6,87 @@
   },
   "e-": {
     "spin": 0.5,
+    "particle name": "e^-",
     "field name": "e",
     "mass": 1,
     "charge": "-1"
   },
   "e+": {
     "spin": 0.5,
+    "particle name": "e^+",
     "field name": "\\bar{e}",
     "mass": 1,
     "charge": "+1",
-    "antiparticle" : true
+    "antiparticle": true
   },
   "mu-": {
     "spin": 0.5,
+    "particle name": "\\mu^-",
     "field name": "\\mu",
     "mass": 1,
     "charge": "-1"
   },
   "mu+": {
     "spin": 0.5,
+    "particle name": "\\mu^+",
     "field name": "\\bar{\\mu}",
     "mass": 1,
     "charge": "+1",
-    "antiparticle" : true
+    "antiparticle": true
   },
   "tao-": {
     "spin": 0.5,
+    "particle name": "\\tau^-",
     "field name": "\\tau",
     "mass": 1,
     "charge": "-1"
   },
   "tao+": {
     "spin": 0.5,
+    "particle name": "\\tau^+",
     "field name": "\\bar{\\tau}",
     "mass": 1,
     "charge": "+1",
-    "antiparticle" : true
+    "antiparticle": true
   },
   "ve": {
     "spin": 0.5,
+    "particle name": "\\nu_e",
     "field name": "\\nu_e",
     "mass": 1
   },
   "vebar": {
     "spin": 0.5,
+    "particle name": "\\bar{\\nu_e}",
     "field name": "\\bar{\\nu_e}",
     "mass": 1,
-    "antiparticle" : true
+    "antiparticle": true
   },
   "vmu": {
     "spin": 0.5,
+    "particle name": "\\nu_\\mu",
     "field name": "\\nu_\\mu",
     "mass": 1
   },
   "vmubar": {
     "spin": 0.5,
+    "particle name": "\\bar{\\nu_\\mu}",
     "field name": "\\bar{\\nu_\\mu}",
     "mass": 1,
-    "antiparticle" : true
+    "antiparticle": true
   },
   "vtau": {
     "spin": 0.5,
-    "field name": "\\nu_\\mu",
+    "particle name": "\\nu_\\tau",
+    "field name": "\\nu_\\tau",
     "mass": 1
   },
   "vtaubar": {
     "spin": 0.5,
+    "particle name": "\\bar{\\nu_\\tau}",
     "field name": "\\bar{\\nu_\\tau}",
     "mass": 1,
-    "antiparticle" : true
+    "antiparticle": true
   },
   "u": {
     "spin": 0.5,
@@ -85,11 +97,12 @@
   },
   "ubar": {
     "spin": 0.5,
+    "particle name": "\\bar{u}",
     "field name": "\\bar{u}",
     "mass": 1,
     "color": "aq",
     "charge": "-2/3",
-    "antiparticle" : true
+    "antiparticle": true
   },
   "d": {
     "spin": 0.5,
@@ -100,11 +113,12 @@
   },
   "dbar": {
     "spin": 0.5,
+    "particle name": "\\bar{d}",
     "field name": "\\bar{d}",
     "mass": 1,
     "color": "aq",
     "charge": "1/3",
-    "antiparticle" : true
+    "antiparticle": true
   },
   "c": {
     "spin": 0.5,
@@ -115,11 +129,12 @@
   },
   "cbar": {
     "spin": 0.5,
+    "particle name": "\\bar{c}",
     "field name": "\\bar{c}",
     "mass": 1,
     "color": "aq",
     "charge": "-2/3",
-    "antiparticle" : true
+    "antiparticle": true
   },
   "s": {
     "spin": 0.5,
@@ -130,11 +145,12 @@
   },
   "sbar": {
     "spin": 0.5,
+    "particle name": "\\bar{s}",
     "field name": "\\bar{s}",
     "mass": 1,
     "color": "aq",
     "charge": "1/3",
-    "antiparticle" : true
+    "antiparticle": true
   },
   "t": {
     "spin": 0.5,
@@ -145,11 +161,12 @@
   },
   "tbar": {
     "spin": 0.5,
+    "particle name": "\\bar{t}",
     "field name": "\\bar{t}",
     "mass": 1,
     "color": "aq",
     "charge": "-2/3",
-    "antiparticle" : true
+    "antiparticle": true
   },
   "b": {
     "spin": 0.5,
@@ -160,29 +177,34 @@
   },
   "bbar": {
     "spin": 0.5,
+    "particle name": "\\bar{b}",
     "field name": "\\bar{b}",
     "mass": 1,
     "color": "aq",
     "charge": "1/3",
-    "antiparticle" : true
+    "antiparticle": true
   },
   "gamma": {
     "spin": 1,
+    "particle name": "\\gamma",
     "field name": "A",
     "field strength name": "{F}"
   },
   "gamma+": {
     "spin": 1,
+    "particle name": "\\gamma^+",
     "field name": "A",
     "field strength name": "{\\gamma}"
   },
   "gamma-": {
     "spin": -1,
+    "particle name": "\\gamma^-",
     "field name": "A",
     "field strength name": "{\\gamma}"
   },
   "W+": {
     "spin": 1,
+    "particle name": "W^+",
     "field name": "{(W^+)}",
     "field strength name": "{(W^+)}",
     "mass": 1,
@@ -190,6 +212,7 @@
   },
   "W-": {
     "spin": 1,
+    "particle name": "W^-",
     "field name": "{(W^-)}",
     "field strength name": "{(W^-)}",
     "mass": 1,
@@ -210,6 +233,7 @@
   },
   "g+": {
     "spin": 1,
+    "particle name": "g^+",
     "field name": "g",
     "field strength name": "G",
     "mass": 0,
@@ -217,6 +241,7 @@
   },
   "g-": {
     "spin": -1,
+    "particle name": "g^-",
     "field name": "g",
     "field strength name": "G",
     "mass": 0,

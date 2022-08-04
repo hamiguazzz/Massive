@@ -26,7 +26,7 @@ ExportAmp2Tex[l_List, abkFun_, sbkFun_] := ExportAmp2Tex[#, abkFun, sbkFun]& /@ 
 ExportAmp2Tex[expr_Times, abkFun_, sbkFun_] := StringJoin@ExportAmp2Tex[Prod2List[expr], abkFun, sbkFun];
 ExportAmp2Tex[expr_Plus, abkFun_, sbkFun_] := ExportAmp2Tex[Sum2List@expr, abkFun, sbkFun] // StringRiffle[#, "+"]&;
 ExportAmp2Tex[expr_] := ExportAmp2Tex[expr, defaultAbkFun, defaultSbkFun];
-ExportAmpMassive2Tex[np_Integer] := ExportAmp2Tex[Last@FactorizeBracket@#&/@ReplaceBraNumber[
+ExportAmpMassive2Tex[np_Integer] := ExportAmp2Tex[Last@FactorizeBracket@#& /@ ReplaceBraNumber[
   Table[(2 * np + 1 - i) -> ToString@i <> "^{\\prime}", {i, 1, np}]
 ][#]]&;
 
@@ -133,7 +133,7 @@ ExportWelyOp2Tex[weylop_Plus, opts : OptionsPattern[]] := (ExportSpinorObj2Tex[#
     StringRiffle[#, "+"]&;
 ExportWelyOp2Tex[weylop_, opts : OptionsPattern[]] := ExportSpinorObj2Tex[#, opts]&@weylop;
 (*Example external-><|1->{"W^+","W^+"},2->{"W^-","W^-"},3->{"g","G"},4->{"A","F"},5->{"\\nu_e"},6->{"e"}|>*)
-Options[ExportSpinorObj2Tex] := {external -> "Default", antiPaticleList -> {}, addbra -> True};
+Options[ExportSpinorObj2Tex] := {external -> "Default", antiPaticleList -> {}, addbra -> True, "form" -> String};
 ExportSpinorObj2Tex[spinorOpListParm_, OptionsPattern[]] := Module[{
   spinorOpList, innerRules, externalRules, FieldTranslationRule, dic
 },
@@ -141,14 +141,14 @@ ExportSpinorObj2Tex[spinorOpListParm_, OptionsPattern[]] := Module[{
   If[Length@spinorOpListParm == 0, Return[{}]];
   spinorOpList = If[OptionValue@addbra, AddBrasToSpinorObjList[spinorOpListParm], spinorOpListParm];
   spinorOpList = AddBrasToSpinorObjListTr[spinorOpList];
-  ReverseRule[particle_Integer]:={
+  ReverseRule[particle_Integer] := {
     {particle, 1 / 2, others___} :> {particle, - 1 / 2, others},
     {particle, -1 / 2, others___} :> {particle, 1 / 2, others},
     {particle, -1 / 2 I, others___} :> {particle, 1 / 2 I, others},
     {particle, 1 / 2 I, others___} :> {particle, -1 / 2 I, others}
   };
   reverseRule = ReverseRule /@ OptionValue@antiPaticleList // Flatten;
-  spinorOpList = spinorOpList/.reverseRule;
+  spinorOpList = spinorOpList /. reverseRule;
 
   (*init replace rules*)
   innerRules = {
@@ -242,36 +242,7 @@ ExportSpinorObj2Tex[spinorOpListParm_, OptionsPattern[]] := Module[{
 
   dic = Join[innerRules, externalRules];
 
-  Return[StringJoin[Riffle[spinorOpList/.dic," "]]];
-
-
-  (*  curObj = spinorOpList[[1]];*)
-  (*  opList = Drop[spinorOpList, 1];*)
-  (*  If[(curObj // Head // ToString) != "List", *)(*only simplefied color term does not have list as head*)
-  (*    AppendTo[outList, "(" <> ((curObj //. dic) // ToString) <> ")"];*)
-  (*    curObj = opList[[1]];*)
-  (*    opList = Drop[opList, 1];*)
-  (*  ];*)
-  (*  While[curObj != {"Tr"},*)
-  (*    AppendTo[outList, curObj /. dic];*)
-  (*    If[Length[opList] == 0, Return[StringJoin[outList]]];*)
-  (*    curObj = opList[[1]];*)
-  (*    opList = Drop[opList, 1];*)
-  (*  ];*)
-  (*  While[Length[opList] != 0,*)
-  (*    trList = {};*)
-  (*    curObj = opList[[1]];*)
-  (*    opList = Drop[opList, 1];*)
-  (*    While[curObj != {"Tr"},*)
-  (*      AppendTo[trList, curObj /. dic];*)
-  (*      curObj = opList[[1]];*)
-  (*      opList = Drop[opList, 1];*)
-  (*      If[Length[opList] == 0, AppendTo[trList, curObj /. dic];*)
-  (*      Break[]]*)
-  (*    ];*)
-  (*    outList = Join[outList, {"\\operatorname{Tr}\\left("}, trList, {"\\right)"}];*)
-  (*  ];*)
-(*  Return[StringJoin[outList]];*)
+  Switch[OptionValue@"form", List, Return[ spinorOpList /. dic ], String | _, Return[StringJoin[Riffle[spinorOpList /. dic, " "]]]]
 ];
 
 
