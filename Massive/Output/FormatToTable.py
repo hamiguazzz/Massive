@@ -74,7 +74,10 @@ class BasisOutputManager:
 
         return indices_counter
 
-    def gen_table(self, d: int, max_column: int, max_length: int = 100, placement: str = "!ht"):
+    def gen_table(self, d: int, max_column: int,
+                  max_length: int = 100, placement: str = "c!ht", add_begin: str = ""):
+        empty_equ = "  "
+
         def prepare_equ(d_parm, column_parm):
             ops = list(zip(self.ops_dict[d_parm], map(BasisOutputManager.count_equ_length, self.ops_dict[d_parm])))
             if len(ops) < column_parm:
@@ -83,13 +86,13 @@ class BasisOutputManager:
             ops = list(map(lambda t: ("$ \\displaystyle " + " ".join(t[0]) + " $", t[1]), ops))
             # ops += [("  ", 0)] * (column_parm - (len(ops) % column_parm))
             length_dict = dict(ops)
-            length_dict["  "] = 0
+            length_dict[empty_equ] = 0
             ops = np.array(ops)[:, 0]
             ops2 = ops[0: len(ops) - (len(ops) % column_parm)]
             ops2 = np.reshape(ops2, (column_parm, -1))
             ops2 = np.transpose(ops2).tolist()
             if (len(ops) % column_parm) is not 0:
-                ops2.append(ops[len(ops) - (len(ops) % column_parm): len(ops)].tolist() + ["  "] * (
+                ops2.append(ops[len(ops) - (len(ops) % column_parm): len(ops)].tolist() + [empty_equ] * (
                         column_parm - (len(ops) % column_parm)))
             ops = ops2
             counted_max_len = max(map(lambda row:
@@ -102,30 +105,23 @@ class BasisOutputManager:
             return re_tuple
 
         def gen_form(content_parm, column_parm: int):
+            table_env = "longtable"
+            spacing = " " * 4
             table_head = "Type: $" + self.type_name + " \\quad D=" + str(d) + \
                          " \\quad \\mathcal{O}_{" + str(d) + "}^{" + \
                          ("1" if self.amounts_of_op[d] == 1 else "1\\sim " + str(self.amounts_of_op[d])) + "}$"
-            begin_table = f"\\begin{{table}}[{placement}]" + "\n\\centering\n\\begin{tabular}" + \
-                          "{|" + "l" * column_parm + "|} \n    \\hline\n" + \
-                          "    \\multicolumn{" + str(column_parm) + "}{|c|}{" + table_head + "} \\\\ \\hline\n"
-            end_table = "\\end{tabular}\n\\end{table}\n\n"
+            begin_table = f"\\begin{{{table_env}}}[{placement}]{{{'l'.join('|' * (column_parm + 1))}}}\n" \
+                          f"{add_begin}{spacing}\\hline\n" \
+                          f"{spacing}\\multicolumn{{{column_parm}}}{{|c|}}{{{table_head}}} \\\\ \hline\n" \
+                          f"{spacing}\\endfirsthead %\n{spacing}\\endhead%\n" \
+                          f"{spacing}\\hline\n{spacing}\\endfoot%\n"
+            end_table = f"\n\\end{{{table_env}}}\n\n"
 
             def gen_row(row_eqs):
-                if column_parm == 1:
-                    return "    " + row_eqs[0] + "    \\\\ \\hline\n"
-                elif column_parm == 2:
-                    return "    \\multicolumn{1}{|l|}{ " + row_eqs[0] + " } & " + row_eqs[1] + "  \\\\ \\hline\n"
-                else:
-                    line = "    \\multicolumn{1}{|l|}{ " + row_eqs[0] + " } &"
-                    for i in range(1, column_parm - 1):
-                        line += " \\multicolumn{1}{l|}{ " + row_eqs[i] + "} &" \
-                            if row_eqs[i] != "  " \
-                            else " " + row_eqs[i] + " &"
-                    line += " " + row_eqs[-1] + "    \\\\ \\hline\n"
-                    return line
+                return f"{spacing}{' & '.join(row_eqs)}\\\\ "
 
             all_lines = list(map(gen_row, content_parm))
-            return begin_table + "".join(all_lines) + end_table
+            return begin_table + "\\hline\n".join(all_lines) + end_table
 
         prepared_eqs, column = prepare_equ(d, max_column)
         return gen_form(prepared_eqs, column)
@@ -166,5 +162,5 @@ if __name__ == '__main__':
     # print(rt.ops_dict)
     # print(rt.gen_section())
     with open('result.txt', "w") as writing_file:
-        content = connect_all_result(os.path.curdir, has_dimension_section=False, max_column=3, max_length=90)
+        content = connect_all_result(os.path.curdir, has_dimension_section=True, max_column=3, max_length=80)
         writing_file.write(content)
