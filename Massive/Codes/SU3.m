@@ -289,7 +289,7 @@ AuxConstructIdenticalColorBasisByFakeDim[
   (*Find independent parts*)
   GetTotalOperator[opDict_] := Dot @@ Table[exprDict[id] /. opDict[id], {id, identicalList}];
   GetIndependentBasisByTotalOp[{basis_, opDict_}] :=
-      basis[[#]]& /@ FindIndependentBasisPos[Transpose@GetTotalOperator[opDict]];
+      basis[[#]]& /@ FindIndependentBasisPos[GetTotalOperator[opDict]];
   GetIndependentBasisByTotalOp @ coloredPhyOperatorDict // Return;
 ];
 
@@ -336,10 +336,10 @@ AuxConstructIdenticalColorBasis[su3ShapeList_, identicalParm_, h_, OptionsPatter
   (
     colorInnerOpDict = GetColorInnerPermutedOperatorDict[colorIndDict, ruleInnerCoorsDict[#]&];
     projectionOp = GetProjectInnerColorOp[colorIndDict, colorInnerOpDict];
-    independentPosList = FindIndependentBasisPos[Transpose@projectionOp];
+    independentPosList = FindIndependentBasisPos[projectionOp];
     If[Length@independentPosList == 0, Return@{colorIndDict, {}, <||>}];
-    proR = projectionOp[[;;, independentPosList]];
-    proL = Transpose @ proR;
+    proL = projectionOp[[independentPosList, ;;]];
+    proR = Transpose @ proL;
     metricInvG = Inverse[proL.proR];
   ) // AbsoluteTiming // (If[OptionValue@log, LogPri["project color basis cost ", #[[1]]]];)&;
 

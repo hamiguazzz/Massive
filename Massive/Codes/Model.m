@@ -87,8 +87,10 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
   massivePos = Complement[Range@Length@particles, masslessPos];
   particles = particles[[massivePos ~ Join ~ masslessPos]];
   spins = $currentModel[#]["spin"]& /@ particles;
+  np = Length@spins;
   masses = $currentModel[#]["mass"]& /@ particles;
   charges = $currentModel[#]["charge"]& /@ particles;
+  colors = $currentModel[#]["color"]& /@ particles;
   If[Length@massivePos == 0, Print["at least one particle massive!"]; Return[];];
   If[
     OddQ[2 * Plus @@ spins]
@@ -97,8 +99,6 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
     Print["particles combination are illegal!"];
     Return[];
   ];
-  np = Length@spins;
-  colors = $currentModel[#]["color"]& /@ particles;
   identicalList = particles // PositionIndex // Values // Select[Length@# > 1 &];
   externalDict = Association@Table[ i ->
       If[$currentModel[particles[[i]]]["field strength name"] === "",
@@ -184,7 +184,7 @@ BasisResultDict2JsonObj[particles_List, texDict_?AssociationQ, OptionsPattern[]]
   {jsonObj = {}, head, dims, dimProps, nonOpDims = {}, fDim = OptionValue@"dimWrap", fEqu = OptionValue@"equWrap"},
   (*Head*)
   head = If[OptionValue@"headWrap" =!= Default, (OptionValue@"headWrap")[particles],
-    StringRiffle[$currentModel[#]["particle name"]&/@ particles, " "]
+    StringRiffle[$currentModel[#]["particle name"]& /@ particles, " "]
   ];
 
   dims = Keys@texDict;

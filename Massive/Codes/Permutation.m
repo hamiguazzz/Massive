@@ -382,7 +382,7 @@ ConstructIndependentBasis[spins_List, physicalDim_Integer, identical_ : {}, opts
   (*The keys of fakeDimResult may be subset of fakeDimList because of some Null result from construction*)
   fakeDimBasis = Table[AuxConstructIndependentBasisByFakeDim[fakeDimResult[fd], physicalDim, identicalList, exprDict],
     {fd, Keys@fakeDimResult}] // TimingTest["calc identical fake basis cost "];
-(*  Print[fakeDimBasis];*)
+  (*  Print[fakeDimBasis];*)
   If[OptionValue@log, LogPri["fake dim ", fakeDimList, " contribute ", Length /@ fakeDimBasis]];
   Return[fakeDimBasis // Flatten];
 ];
@@ -398,5 +398,5 @@ AuxConstructIndependentBasisByFakeDim[result : {icfs_, data_}, phyDim_, identica
     Dot @@ Table[exprDict[id] /. phyOperatorDict[[2]][id], {id, identicalList}],
     IdentityMatrix[Length@phyOperatorDict[[1]]]
   ];
-  phyOperatorDict[[1]][[#]]& /@ FindIndependentBasisPos[Transpose@totalOp] // Flatten // Return;
+  phyOperatorDict[[1]][[#]]& /@ FindIndependentBasisPos[totalOp] // Flatten // Return;
 ];
