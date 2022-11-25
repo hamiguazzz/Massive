@@ -76,7 +76,7 @@ BasisByModel[particlesParm_List, fromOpDim_, toOpDim_, OptionsPattern[]] := Modu
   {particles, massivePos, masslessPos, np, spins, masses,
     antiparticles, colors, charges, identicalList,
     externalDict, currentBasis, currentResult, resultDict},
-  particles = Sort[particlesParm];
+  particles = Sort[particlesParm, $currentModel[#]["spin"] & /@ # &];
   If[Length@particles < 4 || Or @@ (!KeyExistsQ[$currentModel, #]& /@ particles),
     Print["particles are illegal!"];
     Return[];

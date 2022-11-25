@@ -75,7 +75,7 @@ class BasisOutputManager:
         return indices_counter
 
     def gen_table(self, d: int, max_column: int,
-                  max_length: int = 100, placement: str = "c!ht", add_begin: str = ""):
+                  max_length: int = 100, placement: str = "l", add_begin: str = ""):
         empty_equ = "  "
 
         def prepare_equ(d_parm, column_parm):
@@ -107,7 +107,7 @@ class BasisOutputManager:
         def gen_form(content_parm, column_parm: int):
             table_env = "longtable"
             spacing = " " * 4
-            table_head = "Type: $" + self.type_name + " \\quad D=" + str(d) + \
+            table_head = "Type: $" + self.type_name + " \\quad \pd=" + str(d) + \
                          " \\quad \\mathcal{O}_{" + str(d) + "}^{" + \
                          ("1" if self.amounts_of_op[d] == 1 else "1\\sim " + str(self.amounts_of_op[d])) + "}$"
             begin_table = f"\\begin{{{table_env}}}[{placement}]{{{'l'.join('|' * (column_parm + 1))}}}\n" \
@@ -162,5 +162,5 @@ if __name__ == '__main__':
     # print(rt.ops_dict)
     # print(rt.gen_section())
     with open('result.txt', "w") as writing_file:
-        content = connect_all_result(os.path.curdir, has_dimension_section=True, max_column=3, max_length=80)
+        content = connect_all_result(os.path.curdir, has_dimension_section=True, max_column=3, max_length=60)
         writing_file.write(content)
