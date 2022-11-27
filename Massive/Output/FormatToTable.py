@@ -1,9 +1,9 @@
-import re
 import json
+import os
+import re
 from functools import reduce
 
 import numpy as np
-import os
 
 
 class BasisOutputManager:
@@ -75,7 +75,7 @@ class BasisOutputManager:
         return indices_counter
 
     def gen_table(self, d: int, max_column: int,
-                  max_length: int = 100, placement: str = "l", add_begin: str = ""):
+                  max_length: int = 100, placement: str = "c", add_begin: str = ""):
         empty_equ = "  "
 
         def prepare_equ(d_parm, column_parm):
